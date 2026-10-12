@@ -1,0 +1,11 @@
+{
+  "name": "songbook-cg",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/core.test.js && node tests/app.test.js && node tests/denied.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

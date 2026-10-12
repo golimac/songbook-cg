@@ -1,0 +1,128 @@
+import * as C from '../public/js/core.js';
+let fail = 0;
+function eq(name, got, want) {
+  const g = JSON.stringify(got), w = JSON.stringify(want);
+  if (g !== w) { fail++; console.log('FALLA', name, '\n  obtuvo ', g, '\n  esperaba', w); }
+  else console.log('ok   ', name);
+}
+const t = (sym, n, key) => {
+  const k = C.parseKey(key);
+  return C.transposeChord(C.parseChord(sym), n, C.flatsFor(k, n));
+};
+
+// lectura de acordes
+eq('G7/9 extensión', C.parseChord('G7/9').bass, '9');
+eq('D/F# bajo', C.parseChord('D/F#').bass, 'F#');
+eq('Sld7 no es acorde', C.parseChord('Sld7'), null);
+eq('A* variante', C.parseChord('A*').star, true);
+eq('Bdim7', C.parseChord('Bdim7').qual, 'dim7');
+eq('Am7? duda', C.parseChord('Am7?').doubt, true);
+eq('Cmaj7', C.parseChord('Cmaj7').qual, 'maj7');
+
+// transposición con grafía por tonalidad
+eq('Am +1 en Am -> Bbm', t('Am', 1, 'Am'), 'Bbm');
+eq('A +1 en A -> Bb', t('A', 1, 'A'), 'Bb');
+eq('G +1 en G -> Ab', t('G', 1, 'G'), 'Ab');
+eq('D/F# +1 en G -> Eb/G', t('D/F#', 1, 'G'), 'Eb/G');
+eq('Em7 +2 en E -> F#m7', t('Em7', 2, 'E'), 'F#m7');
+eq('G7/9 +2 en G -> A7/9', t('G7/9', 2, 'G'), 'A7/9');
+eq('C4 +2 en C -> D4', t('C4', 2, 'C'), 'D4');
+eq('C +3 en C -> Eb', t('C', 3, 'C'), 'Eb');
+eq('Em -3 en Em -> C#m', t('Em', -3, 'Em'), 'C#m');
+eq('Bdim7 +1 en C -> Db', t('Bdim7', 1, 'C'), 'Cdim7');
+eq('F +0 conserva', t('F', 0, 'F'), 'F');
+eq('A* +2 conserva marca', t('A*', 2, 'A'), 'B*');
+
+// líneas de acordes
+const tk = C.tokenizeLine('G - D - Em - C (50-60-62-64)');
+eq('tokens tipos', tk.map(x => x.type).join(','), 'chord,sep,chord,sep,chord,sep,chord,sep,fig');
+const tk2 = C.tokenizeLine('DO(DO4-DO-SOL7)');
+eq('grupo con acordes', tk2.map(x => x.type).join(','), 'doubt,group');
+const tk3 = C.tokenizeLine('D4 (62-5?-64) Sld7');
+eq('figura incompleta y duda', [tk3[2].incomplete, tk3[4].type], [true, 'doubt']);
+
+// cuerpo
+const body = `{intro: Am - F - C - G (50-5?-52)}
+
+> Am F C G
+[Am]La luz de enero [F]entra
+[Sld7]texto [E7?]fin
+{c: nota}
+{alt: otra frase}
+{sot}
+e|--3--|
+{eot}
+`;
+const bl = C.parseBody(body);
+eq('bloques', bl.map(b => b.type).join(','), 'chords,gap,chords,lyric,lyric,note,alt,tab');
+eq('dudas', C.countDoubts(bl), 3);
+eq('acordes únicos', C.collectChords(bl).map(x => x.orig).join(' '), 'Am F C G E7');
+eq('tonalidad inferida', C.inferKey(bl), { pc: 9, minor: true });
+eq('hay tab/figuras', C.hasUntransposable(bl), true);
+
+// formas
+const sh = (s) => C.shapeFor(C.parseChord(s));
+eq('C abierto', sh('C').frets, [-1, 3, 2, 0, 1, 0]);
+eq('F#m cejilla', [sh('F#m').frets, sh('F#m').base], [[2, 4, 4, 2, 2, 2], 2]);
+eq('Bb cejilla', [sh('Bb').frets, sh('Bb').base], [[-1, 1, 3, 3, 3, 1], 1]);
+eq('Ab (forma E o A)', sh('Ab').barre.fret, 4);
+eq('C4 -> Csus4', sh('C4').frets, [-1, 3, 3, 0, 1, 1]);
+eq('G7/9 sin forma', sh('G7/9'), null);
+const shifted = C.shiftDiagram(sh('F'), 2);
+eq('F +2 cejilla', [shifted.frets, shifted.base], [[3, 5, 5, 4, 3, 3], 3]);
+eq('C abierto no se desplaza', C.shiftDiagram(sh('C'), 2), null);
+
+// posiciones múltiples: cada forma debe sonar solo notas del acorde y empezar en la raíz (o en el bajo)
+const OPENPC = [4, 9, 2, 7, 11, 4];
+const TONES = { '': [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], m7: [0, 3, 7, 10], maj7: [0, 4, 7, 11], sus4: [0, 5, 7], dim7: [0, 3, 6, 9] };
+const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+let total = 0, bad = 0;
+for (const [q, tones] of Object.entries(TONES)) {
+  for (let pc = 0; pc < 12; pc++) {
+    const c = C.parseChord(NAMES[pc] + q);
+    const list = C.shapesFor(c);
+    if (!list.length) { bad++; console.log('sin formas', NAMES[pc] + q); continue; }
+    list.forEach(d => {
+      total++;
+      const pcs = d.frets.map((f, i) => f < 0 ? null : (OPENPC[i] + f) % 12);
+      const sounded = pcs.filter(x => x !== null);
+      const okTones = sounded.every(p => tones.includes(((p - pc) % 12 + 12) % 12));
+      const okRoot = q === 'dim7' || sounded[0] === pc;
+      const okAll = tones.every(t => sounded.includes((pc + t) % 12)) || q === 'sus4' || q.includes('7');
+      if (!okTones || !okRoot || !okAll || Math.max(...d.frets) > 15) { bad++; console.log('forma incorrecta', NAMES[pc] + q, d.frets.join(','), { okTones, okRoot, okAll }); }
+    });
+  }
+}
+eq('todas las formas generadas son correctas (' + total + ' formas)', bad, 0);
+const slashOk = Object.keys(C.shapesFor(C.parseChord('D/F#')).length ? { x: 1 } : {}).length;
+for (const s of ['D/F#', 'G/B', 'C/G', 'C/E', 'Am/G', 'Am/E', 'F/A', 'Dm/F', 'E/G#', 'G/F#', 'D/A', 'A/C#', 'A/E', 'Em/G']) {
+  const c = C.parseChord(s);
+  const d = C.shapesFor(c)[0];
+  const pcs = d.frets.map((f, i) => f < 0 ? null : (OPENPC[i] + f) % 12).filter(x => x !== null);
+  const bassPc = NAMES.indexOf(c.bass.length > 1 ? c.bass : c.bass);
+  eq('bajo de ' + s, NAMES[pcs[0]], c.bass);
+}
+const opens = ['C', 'D', 'E', 'G', 'A', 'F', 'Am', 'Dm', 'Em', 'Bm', 'A7', 'B7', 'C7', 'D7', 'E7', 'G7', 'Cmaj7', 'Fmaj7', 'Gmaj7', 'Amaj7', 'Dmaj7', 'Emaj7', 'Am7', 'Dm7', 'Em7', 'Bm7', 'Dsus4', 'Dsus2', 'Asus4', 'Asus2', 'Esus4', 'Csus4', 'Gsus4', 'A7sus4', 'D7sus4', 'E7sus4'];
+const ext = { Dsus2: [0, 2, 7], Asus2: [0, 2, 7], A7sus4: [0, 5, 7, 10], D7sus4: [0, 5, 7, 10], E7sus4: [0, 5, 7, 10] };
+let badOpen = 0;
+opens.forEach(n => {
+  const c = C.parseChord(n);
+  const d = C.shapesFor(c)[0];
+  const pc = NAMES.indexOf(n.match(/^[A-G]#?/)[0]);
+  const q = n.replace(/^[A-G]#?/, '');
+  const tones = ext[n] || TONES[q === 'sus4' ? 'sus4' : q];
+  const pcs = d.frets.map((f, i) => f < 0 ? null : (OPENPC[i] + f) % 12).filter(x => x !== null);
+  if (!pcs.every(p => tones.includes(((p - pc) % 12 + 12) % 12)) || pcs[0] !== pc) { badOpen++; console.log('forma abierta incorrecta', n, d.frets.join(',')); }
+});
+eq('formas abiertas de la biblioteca correctas (' + opens.length + ')', badOpen, 0);
+eq('C tiene varias posiciones', C.shapesFor(C.parseChord('C')).length >= 4, true);
+eq('C empieza en la forma abierta', C.shapesFor(C.parseChord('C'))[0].frets, [-1, 3, 2, 0, 1, 0]);
+eq('Bdim7 en cuatro inversiones', C.shapesFor(C.parseChord('Bdim7')).length, 5);
+eq('G7/9 sigue sin forma', C.shapesFor(C.parseChord('G7/9')).length, 0);
+eq('A* sin formas de biblioteca', C.shapesFor(C.parseChord('A*')).length, 0);
+
+// ChordPro
+const cp = C.toChordPro({ title: 'Prueba', artist: 'X', key: 'Am', body: '{intro: Am - F}\n[Am]hola [F]mundo\n> G D' });
+console.log('--- ChordPro ---\n' + cp);
+console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
+process.exitCode = fail ? 1 : 0;

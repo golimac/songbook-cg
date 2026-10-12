@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Songbook CG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <button class="logo" id="goHome" aria-label="Ir a la biblioteca">SONGBOOK CG</button>
+  <span class="sp"></span>
+  <span class="who" id="who" hidden></span>
+  <button class="btn" id="signOut" hidden>Salir</button>
+  <button class="btn primary" id="newSong" hidden>Nueva canción</button>
+</div></header>
+<main><div class="wrap" id="view"></div></main>
+
+<div class="pop" id="pop" hidden></div>
+
+<div class="modal" id="dgModal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="dgTitle">
+    <h2 id="dgTitle">Diagrama</h2>
+    <div class="dgedit">
+      <div id="dgBig"></div>
+      <div class="dgform">
+        <label class="f">Traste inicial<input id="dgBase" type="number" min="1" max="15"></label>
+        <label class="chk"><input id="dgBarreOn" type="checkbox"> Cejilla</label>
+        <div id="dgBarreRow" class="grp">
+          <label class="f">Traste<select id="dgBF"></select></label>
+          <label class="f">De cuerda<select id="dgBFrom"></select></label>
+          <label class="f">A cuerda<select id="dgBTo"></select></label>
+        </div>
+        <p class="hint">Toca una casilla para poner o quitar un dedo. El círculo de arriba alterna entre cuerda al aire y cuerda muda.</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="dgSave">Guardar diagrama</button>
+      <button class="btn danger" id="dgDel">Quitar el propio</button>
+      <button class="btn" id="dgCancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="exModal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="exTitle">
+    <h2 id="exTitle">Exportar a ChordPro</h2>
+    <p class="hint">Texto estándar que abren ChordPro, OnSong y SongbookPro. Cópialo y guárdalo como archivo .cho.</p>
+    <textarea id="exTa" readonly spellcheck="false"></textarea>
+    <div class="actions">
+      <button class="btn primary" id="exCopy">Copiar</button>
+      <button class="btn" id="exClose">Cerrar</button>
+      <span class="hint" id="exMsg" role="status"></span>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createFirebaseApi } from './js/firebase-api.js';
+import { start } from './js/app.js';
+start(createFirebaseApi());
+</script>
+</body>
+</html>
