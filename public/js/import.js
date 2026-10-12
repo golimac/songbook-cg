@@ -79,7 +79,6 @@ export function createImporter(d) {
       '<div class="seg2">' +
         '<div class="stagewrap"><div class="stage" id="imStage"><img src="' + esc(I.h.url) + '" alt="Foto de la página" draggable="false">' + boxes + '</div></div>' +
         '<div class="segside">' +
-          '<label class="f">Página de esta foto<input type="text" id="imPageVal" inputmode="numeric" value="' + esc(I.pageVal) + '"></label>' +
           '<div id="segList" class="segList"></div>' +
           '<div class="actions"><button class="btn" type="button" id="imAdd">Agregar recuadro</button>' +
           '<button class="btn primary" type="button" id="imGo">Leer las canciones</button>' +
@@ -203,8 +202,7 @@ export function createImporter(d) {
   view.addEventListener('input', function (e) {
     if (!I.active) return;
     var t = e.target;
-    if (t.id === 'imPageVal') I.pageVal = t.value.trim();
-    else if (t.getAttribute && t.getAttribute('data-t') != null) I.boxes[parseInt(t.getAttribute('data-t'), 10)].title = t.value;
+    if (t.getAttribute && t.getAttribute('data-t') != null) I.boxes[parseInt(t.getAttribute('data-t'), 10)].title = t.value;
   });
   view.addEventListener('change', function (e) {
     if (!I.active) return;

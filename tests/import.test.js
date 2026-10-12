@@ -79,7 +79,7 @@ await wait(30);
 // ---- recuadros ----
 ok('detecta con una sola imagen reducida', reads[0].mode === 'segment' && reads[0].images.length === 1);
 ok('muestra 3 recuadros y 3 filas', $$('.bx').length === 3 && $$('.sgi').length === 3);
-ok('la página detectada manda sobre la supuesta', $('#imPageVal').value === '52');
+ok('la pantalla de recuadros no tiene campo de página', !$('#imPageVal'));
 ok('la nota de duda se ve', /continuación de La familia/.test($('#segList').textContent));
 ok('el recuadro 3 sale como continuación del 1', $('[data-c="2"]').value === '0');
 const stage = $('#imStage');
