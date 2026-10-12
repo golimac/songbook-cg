@@ -22,6 +22,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:0 48px}
 h1,h2{margin:0;line-height:1.2;text-wrap:balance}
 h1{font-size:26px;font-weight:600}
