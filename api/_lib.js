@@ -106,7 +106,7 @@ export function validateBody(b) {
   return { mode: b.mode, images, hint };
 }
 
-export function buildRequest(parsed, env) {
+export function buildRequest(parsed, env, retry) {
   const tool = TOOLS[parsed.mode];
   const model = parsed.mode === 'segment'
     ? (env.ANTHROPIC_MODEL_SEGMENT || 'claude-sonnet-5-5')
@@ -118,13 +118,15 @@ export function buildRequest(parsed, env) {
       ? 'Estas imágenes son partes consecutivas de UNA sola canción, en orden. Transcríbela completa como una canción.'
       : 'Transcribe la canción de esta imagen.');
   const content = parsed.images.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.media_type, data: i.data } }));
-  content.push({ type: 'text', text: ask + (parsed.hint ? '\n\nContexto del usuario: ' + parsed.hint : '') });
+  content.push({ type: 'text', text: ask + (parsed.hint ? '\n\nContexto del usuario: ' + parsed.hint : '') +
+    (retry ? '\n\nIMPORTANTE: tu respuesta anterior no llamó a la herramienta. Responde solo llamando a ' + tool.name + '.' : '') });
   return {
     model,
     max_tokens: parsed.mode === 'segment' ? 2000 : 6000,
-    system: SYSTEM,
+    // Algunos modelos no admiten forzar la herramienta (tool_choice "tool"), así que se pide en las instrucciones.
+    system: SYSTEM + '\n\nEntrega SIEMPRE el resultado llamando a la herramienta ' + tool.name + ', sin texto antes ni después.',
     tools: [tool],
-    tool_choice: { type: 'tool', name: tool.name },
+    tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content }]
   };
 }
@@ -187,23 +189,29 @@ export async function handle(req, env, fetchFn) {
   if (!owner) return { status: 401, body: { error: 'Sesión no autorizada.' } };
   const parsed = validateBody(req.body);
   if (parsed.error) return { status: 400, body: { error: parsed.error } };
+  const call = (retry) => fetchFn('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify(buildRequest(parsed, env, retry))
+  });
   let resp;
-  try {
-    resp = await fetchFn('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify(buildRequest(parsed, env))
-    });
-  } catch (e) { return { status: 502, body: { error: 'No se pudo contactar al modelo.' } }; }
+  try { resp = await call(false); } catch (e) { return { status: 502, body: { error: 'No se pudo contactar al modelo.' } }; }
   if (resp.status === 401) return { status: 502, body: { error: 'La llave de Anthropic venció o no es válida. Crea una nueva en console.anthropic.com y reemplaza ANTHROPIC_API_KEY en Vercel (Settings, Environment Variables), luego haz Redeploy.' } };
   if (!resp.ok) {
     let msg = '';
     try { const j = await resp.json(); msg = j && j.error && j.error.message ? j.error.message : ''; } catch (e) { /* sin detalle */ }
     return { status: 502, body: { error: 'El modelo respondió con error ' + resp.status + (msg ? ': ' + msg : '.') } };
   }
+  const name = TOOLS[parsed.mode].name;
+  const finish = (input) => ({ status: 200, body: parsed.mode === 'segment' ? normalizeSegments(input) : normalizeSong(input) });
   try {
-    const j = await resp.json();
-    const input = extractToolInput(j, TOOLS[parsed.mode].name);
-    return { status: 200, body: parsed.mode === 'segment' ? normalizeSegments(input) : normalizeSong(input) };
-  } catch (e) { return { status: 502, body: { error: e.message } }; }
+    return finish(extractToolInput(await resp.json(), name));
+  } catch (e) {
+    // Sin tool_choice forzado el modelo puede contestar con texto: un solo reintento recordándole la herramienta.
+    try {
+      const r2 = await call(true);
+      if (!r2.ok) return { status: 502, body: { error: 'El modelo respondió con error ' + r2.status + '.' } };
+      return finish(extractToolInput(await r2.json(), name));
+    } catch (e2) { return { status: 502, body: { error: e2.message } }; }
+  }
 }
