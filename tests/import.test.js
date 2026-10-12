@@ -111,7 +111,7 @@ ok('abre la revisión de la primera canción', /Revisar canción/.test($('h1').t
 ok('el solfeo llegó convertido a letras', /\[Am\]El derrumbe de un \[D\]sue/.test($('#fBody').value) && /\{intro: Am - D - Am\}/.test($('#fBody').value));
 ok('muestra las fotos del recorte', $$('#revImg img').length === 2);
 ok('muestra lo anotado del papel', /MIm\*/.test($('#rev').textContent));
-ok('cancionero y página ya vienen llenos', $('#fSource').value === 'Cancionero 1' && $('#fPage').value === '52');
+ok('el formulario de revisión no tiene cancionero ni página', !$('#fSource') && !$('#fPage'));
 ok('lista la duda con su motivo', /Duda 1 de 1/.test($('#revDoubt').textContent) && /Podría ser SId7/.test($('#revDoubt').textContent));
 ok('con una sola foto no hay ampliación y con varias muestra solo las fotos', $$('#revDoubt .zoom').length === 0);
 click($('[data-rev="next"]'));

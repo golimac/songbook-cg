@@ -122,16 +122,14 @@ click($('#exClose'));
 // ---- editor ----
 click($('[data-act="edit"]'));
 ok('editor con vista previa', !!$('#pv') && $$('#pv .seg').length > 0);
-ok('editor con cancionero y página', !!$('#fSource') && !!$('#fPage'));
-type($('#fPage'), '52'); type($('#fSource'), 'Cancionero 1');
+ok('el editor ya no pide cancionero ni página', !$('#fSource') && !$('#fPage'));
 type($('#fBody'), '[C]Hola [G7]mundo\n{alt: otra}\n[Zz]raro');
 ok('vista previa se actualiza', $$('#pv .seg .c').length === 3 && $('#pvN').textContent.includes('1 duda'));
 ok('alt visible en editor', /alternativa/.test($('#pv').textContent));
 $('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 ok('guardar vuelve a la canción', !!$('#songBody') && /Hola/.test($('#songBody').textContent));
-ok('se escribió cuerpo, página y conteo de dudas', /Hola/.test(api.bodies.get('ej2').body) && api.metas.get('ej2').page === '52' && api.metas.get('ej2').doubts === 1);
+ok('se escribió cuerpo y conteo de dudas', /Hola/.test(api.bodies.get('ej2').body) && api.metas.get('ej2').doubts === 1);
 click($('[data-act="back"]'));
-ok('la lista muestra cancionero y página', /Cancionero 1 · p\. 52/.test($$('.item').find((i) => /Luz de enero/.test(i.textContent)).textContent));
 
 // ---- diagrama emergente ----
 click($('#goHome'));

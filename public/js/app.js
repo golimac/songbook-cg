@@ -338,8 +338,6 @@ function openEditor(id, review) {
       '<div class="row"><label class="f">Título<input type="text" id="fTitle"></label><label class="f">Artista<input type="text" id="fArtist"></label></div>' +
       '<div class="row"><label class="f">Tonalidad<input type="text" id="fKey" placeholder="Am, G, Bb"></label>' +
         '<label class="f">Afinación o cejilla de la fuente<input type="text" id="fTuning"></label>' +
-        '<label class="f">Cancionero<input type="text" id="fSource" placeholder="Nombre del cancionero"></label>' +
-        '<label class="f">Página<input type="text" id="fPage" inputmode="numeric"></label>' +
         '<label class="f">Estado<select id="fStatus">' + stOpts + '</select></label></div>' +
       '<label class="f">Letra y acordes<textarea id="fBody" spellcheck="false"></textarea></label>' +
       '<details class="syntax"><summary>Cómo se escribe</summary><ul>' +
@@ -359,7 +357,7 @@ function openEditor(id, review) {
     '</form>' +
     '<aside class="pv"><div class="pvh"><span>Vista previa</span><span id="pvN"></span></div><div class="dgs" id="edDg"></div><article class="song" id="pv"></article></aside></div>';
   $('#fTitle').value = d.title; $('#fArtist').value = d.artist; $('#fKey').value = d.key;
-  $('#fTuning').value = d.tuning; $('#fSource').value = d.source; $('#fPage').value = d.page || ''; $('#fBody').value = d.body;
+  $('#fTuning').value = d.tuning; $('#fBody').value = d.body;
   refreshPreview();
   if (review) {
     var im = $('#revImg img');
@@ -426,7 +424,7 @@ function refreshPreview() {
 function readForm() {
   var d = S.draft;
   d.title = $('#fTitle').value; d.artist = $('#fArtist').value; d.key = $('#fKey').value.trim();
-  d.tuning = $('#fTuning').value; d.source = $('#fSource').value; d.page = $('#fPage').value.trim(); d.status = $('#fStatus').value; d.body = $('#fBody').value;
+  d.tuning = $('#fTuning').value; d.status = $('#fStatus').value; d.body = $('#fBody').value;
 }
 /* ---------- Editor de diagramas ---------- */
 var dgS = null, dgTarget = null;
@@ -558,7 +556,7 @@ view.addEventListener('input', function (e) {
   var id = e.target.id;
   if (id === 'q') { S.q = e.target.value; fillList(); }
   else if (id === 'dur') { S.dur = parseInt(e.target.value, 10); $('#durv').textContent = fmtDur(S.dur); }
-  else if (S.view === 'edit' && /^f(Title|Artist|Key|Tuning|Source|Page|Status|Body)$/.test(id)) { readForm(); refreshPreview(); }
+  else if (S.view === 'edit' && /^f(Title|Artist|Key|Tuning|Status|Body)$/.test(id)) { readForm(); refreshPreview(); }
 });
 view.addEventListener('change', function (e) {
   var id = e.target.id;
