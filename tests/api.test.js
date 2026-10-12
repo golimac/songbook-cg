@@ -65,6 +65,8 @@ r = await handle(req({ mode: 'transcribe', images: [img] }), {}, mkFetch({}));
 ok('sin llave de Anthropic avisa qué falta', r.status === 500 && /ANTHROPIC_API_KEY/.test(r.body.error));
 r = await handle(req({ mode: 'transcribe', images: [img] }), env, mkFetch({ modelStatus: 402 }));
 ok('error del modelo llega con su mensaje', r.status === 502 && /402/.test(r.body.error) && /saldo/.test(r.body.error));
+r = await handle(req({ mode: 'transcribe', images: [img] }), env, mkFetch({ modelStatus: 401 }));
+ok('llave vencida explica cómo reemplazarla', r.status === 502 && /venció/.test(r.body.error) && /ANTHROPIC_API_KEY/.test(r.body.error));
 r = await handle(req({ mode: 'segment', images: [img] }), env, mkFetch({ tool: 'otra', input: {} }));
 ok('respuesta sin la herramienta esperada es error 502', r.status === 502);
 r = await handle(req({ mode: 'segment', images: [img] }), env, mkFetch({ tool: 'report_segments', input: { page_number: '52', page_header: '', songs: [{ title: 'A', box: { x: 0, y: 0, w: 0.5, h: 0.5 }, continues: null, note: '' }] } }));

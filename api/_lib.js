@@ -195,6 +195,7 @@ export async function handle(req, env, fetchFn) {
       body: JSON.stringify(buildRequest(parsed, env))
     });
   } catch (e) { return { status: 502, body: { error: 'No se pudo contactar al modelo.' } }; }
+  if (resp.status === 401) return { status: 502, body: { error: 'La llave de Anthropic venció o no es válida. Crea una nueva en console.anthropic.com y reemplaza ANTHROPIC_API_KEY en Vercel (Settings, Environment Variables), luego haz Redeploy.' } };
   if (!resp.ok) {
     let msg = '';
     try { const j = await resp.json(); msg = j && j.error && j.error.message ? j.error.message : ''; } catch (e) { /* sin detalle */ }
