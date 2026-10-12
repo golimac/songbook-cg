@@ -48,9 +48,13 @@ const type = (el, v) => { el.value = v; el.dispatchEvent(new w.Event('input', { 
 const api = mockApi();
 start(api);
 
+// ---- modo invitado ----
+await wait();
+ok('sin sesión se ve la biblioteca', !!$('#q') && !$('#signIn'));
+ok('invitado no ve controles de edición', $('#newSong').hidden === true && $('#importBtn').hidden === true && $('#signOut').hidden === true && $('#signInTop').hidden === false);
+ok('invitado no ve el botón de cargar ejemplos', !$('#seed'));
 // ---- acceso ----
-ok('sin sesión muestra el acceso', !!$('#signIn') && $('#newSong').hidden === true);
-click($('#signIn')); await wait();
+click($('#signInTop')); await wait();
 ok('con sesión muestra la biblioteca y el correo', !!$('#q') && $('#who').textContent === 'yo@example.test' && $('#newSong').hidden === false);
 ok('biblioteca vacía ofrece cargar ejemplos', !!$('#seed'));
 click($('#seed')); await wait();
@@ -188,9 +192,23 @@ click($$('.item')[0]); await wait(); click($('[data-act="edit"]'));
 click($('#edDel')); ok('primer clic pide confirmar', /Confirmar/.test($('#edDel').textContent));
 click($('#edDel')); ok('segundo clic elimina', $$('.item').length === 2 && api.metas.size === 2 && api.bodies.size === 2);
 
-// ---- salir ----
+// ---- salir: de vuelta al modo invitado ----
 click($('#signOut')); await wait();
-ok('salir vuelve al acceso y oculta los controles', !!$('#signIn') && $('#newSong').hidden === true && $('#who').hidden === true);
+ok('salir deja la biblioteca visible y oculta los controles', !!$('#q') && $$('.item').length === 2 && $('#newSong').hidden === true && $('#who').hidden === true && $('#signInTop').hidden === false);
+click($$('.item').find((i) => /Luz de enero/.test(i.textContent))); await wait();
+ok('invitado abre la canción y no ve Editar', !!$('#songBody') && !$('[data-act="edit"]') && !!$('[data-act="export"]'));
+const g0 = [...$$('#songBody .seg .c')].map((c) => c.textContent.trim()).filter(Boolean);
+click($('[data-act="tp"]'));
+ok('invitado puede transponer', JSON.stringify([...$$('#songBody .seg .c')].map((c) => c.textContent.trim()).filter(Boolean)) !== JSON.stringify(g0));
+click($('[data-act="t0"]'));
+ok('invitado no tiene diagramas para editar', $$('#dgStrip [data-edit]').length === 0 && $$('#dgStrip .dg.none i').every((i) => !/dibujar/.test(i.textContent)));
+const gch = $$('#songBody [data-ch]')[0];
+gch.dispatchEvent(new w.MouseEvent('mouseover', { bubbles: true }));
+ok('invitado ve el diagrama emergente sin botón de edición', $('#pop').hidden === false && !$('#pop [data-pop="edit"]') && !!$('#pop svg'));
+d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+const w0 = api.writes;
+click($('[data-act="back"]'));
+ok('invitado no escribe nada', api.writes === w0);
 
 console.log(fails.length ? '\nFALLARON:\n' + fails.join('\n') : '\nsin errores');
 process.exitCode = fails.length ? 1 : 0;

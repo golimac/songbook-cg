@@ -4,11 +4,11 @@ Cancionero personal para guitarra: letras con acordes, transposición, diagramas
 
 - **Alojamiento:** Vercel, desde este repositorio (carpeta `public/`, sin paso de compilación).
 - **Datos:** Firebase Firestore. `songs/{id}` guarda los datos livianos de la lista y `bodies/{id}` el cuerpo de cada canción.
-- **Acceso:** inicio de sesión con Google. Las reglas de `firestore.rules` permiten leer y escribir solo al dueño.
+- **Acceso:** cualquiera con el enlace puede ver las canciones (modo invitado: transponer, cejilla, diagramas, autoscroll y exportar, sin editar nada). Escribir exige iniciar sesión con la cuenta del dueño, según `firestore.rules`.
 
 ## Puesta en marcha
 
-1. **Reglas de Firestore.** En la consola de Firebase, Firestore Database, pestaña Reglas: pega `firestore.rules`, cambia `REEMPLAZA_CON_TU_CORREO@gmail.com` por tu correo de Google y publica.
+1. **Reglas de Firestore.** En la consola de Firebase, Firestore Database, pestaña Reglas: pega `firestore.rules` (reemplaza lo que haya), cambia `REEMPLAZA_CON_TU_CORREO@gmail.com` por tu correo de Google y publica.
 2. **Vercel.** Importa el repositorio en Vercel con el preset *Other*. No hay comando de compilación. `vercel.json` ya indica la carpeta `public`.
 3. **Dominios autorizados.** En Firebase, Authentication, Configuración, Dominios autorizados: agrega el dominio que Vercel asigne (por ejemplo `songbook-cg.vercel.app`).
 4. **Lectura de fotos.** En Vercel, Settings, Environment Variables, agrega y vuelve a desplegar:

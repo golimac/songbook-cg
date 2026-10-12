@@ -59,7 +59,7 @@ const imaging = {
 };
 start(api, { imaging });
 
-click($('#signIn')); await wait();
+click($('#signInTop')); await wait();
 ok('hay botón de importar fotos', $('#importBtn').hidden === false);
 click($('#importBtn'));
 ok('muestra el formulario de importación', !!$('#imForm') && !!$('#imFiles'));

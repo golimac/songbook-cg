@@ -14,6 +14,9 @@ start({
   signOut: async () => authCb(null),
   subscribeSongs(ok, err) { setTimeout(() => err({ code: 'permission-denied', message: 'x' }), 0); return () => {}; }
 });
+await new Promise((r) => setTimeout(r, 5));
+const pideCuenta = !!d.querySelector('#signIn') && /pide una cuenta/.test(d.body.textContent);
+console.log((pideCuenta ? 'ok    ' : 'FALLA ') + 'si las reglas no permiten leer sin cuenta, el invitado ve la invitación a entrar');
 d.querySelector('#signIn').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
 await new Promise((r) => setTimeout(r, 5));
 const sinAcceso = /Sin acceso/.test(d.querySelector('h1').textContent) && /otra@example\.test/.test(d.body.textContent);
@@ -22,4 +25,4 @@ d.querySelector('#signOut2').dispatchEvent(new w.MouseEvent('click', { bubbles: 
 await new Promise((r) => setTimeout(r, 5));
 const vuelve = !!d.querySelector('#signIn');
 console.log((vuelve ? 'ok    ' : 'FALLA ') + 'salir lleva de nuevo al acceso');
-process.exitCode = sinAcceso && vuelve ? 0 : 1;
+process.exitCode = pideCuenta && sinAcceso && vuelve ? 0 : 1;

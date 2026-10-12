@@ -39,8 +39,9 @@ var listLoaded = false;
 var user = null, unsub = null, denied = false;
 var S = { view: 'library', id: null, song: null, shift: 0, capo: 0, fs: 13, dg: true, auto: false, dur: 150, q: '', draft: null, isNew: false, pos: {}, review: null, revI: 0 };
 var view = $('#view');
+function editable() { return !!user; }
 function cur() { return S.view === 'edit' ? S.draft : S.song; }
-function failSave(e) { toast('No se pudo guardar: ' + ((e && e.message) || 'error desconocido'), true); }
+function failSave(e) { toast((e && e.code === 'permission-denied') ? 'Esta cuenta no tiene permiso para editar.' : 'No se pudo guardar: ' + ((e && e.message) || 'error desconocido'), true); }
 var imp = createImporter({
   view: view, esc: esc, toast: toast, api: api, imaging: cfg.imaging || realImaging, uid: uid,
   openReview: function (rv) { openEditor(null, rv); },
@@ -149,7 +150,7 @@ function posIndex(P) {
   return n ? (((S.pos[P.disp] || 0) % n) + n) % n : 0;
 }
 function stripHTML(song, ctx) {
-  var can = ctx.ss === 0;
+  var can = ctx.ss === 0 && editable();
   return collectChords(ctx.blocks).map(function (it) {
     var P = positionsFor(song, ctx, it.orig);
     var tag = can ? 'button' : 'div';
@@ -180,8 +181,10 @@ function fillList() {
   if (!listLoaded) { $('#count').textContent = ''; $('#list').innerHTML = '<p class="hint">Cargando biblioteca…</p>'; return; }
   if (!songs.length) {
     $('#count').textContent = '';
-    $('#list').innerHTML = '<div class="empty"><p>La biblioteca está vacía. Agrega una canción con el botón de arriba, o carga tres canciones de ejemplo para probar la aplicación.</p>' +
-      '<button class="btn" id="seed">Cargar canciones de ejemplo</button></div>';
+    $('#list').innerHTML = editable()
+      ? '<div class="empty"><p>La biblioteca está vacía. Agrega una canción con el botón de arriba, o carga tres canciones de ejemplo para probar la aplicación.</p>' +
+        '<button class="btn" id="seed">Cargar canciones de ejemplo</button></div>'
+      : '<div class="empty"><p>La biblioteca está vacía.</p></div>';
     return;
   }
   var q = norm(S.q);
@@ -204,7 +207,7 @@ function fillList() {
 function renderLogin() {
   imp.cancel(); stopAuto(); hidePop();
   S.view = 'login';
-  view.innerHTML = '<div class="login"><h1>Songbook CG</h1><p class="hint">Tu cancionero personal. Entra con tu cuenta de Google.</p>' +
+  view.innerHTML = '<div class="login"><h1>Songbook CG</h1><p class="hint">Esta biblioteca pide una cuenta para leerse. Entra con Google.</p>' +
     '<button class="btn primary" id="signIn">Entrar con Google</button></div>';
 }
 function renderDenied() {
@@ -218,15 +221,14 @@ function applyAuth(u) {
   songs = []; listLoaded = false;
   var on = !!u;
   $('#who').hidden = !on; $('#who').textContent = on ? u.email : '';
-  $('#signOut').hidden = !on; $('#newSong').hidden = !on; $('#importBtn').hidden = !on;
-  if (!on) { renderLogin(); return; }
+  $('#signOut').hidden = !on; $('#newSong').hidden = !on; $('#importBtn').hidden = !on; $('#signInTop').hidden = on;
   renderLibrary();
   unsub = api.subscribeSongs(function (list) {
     songs = list; listLoaded = true;
     fillList();
   }, function (e) {
     denied = true; songs = []; listLoaded = true;
-    if (e && e.code === 'permission-denied') renderDenied();
+    if (e && e.code === 'permission-denied') { if (user) renderDenied(); else renderLogin(); }
     else toast('No se pudo leer la biblioteca: ' + ((e && e.message) || 'error'), true);
   });
 }
@@ -251,7 +253,7 @@ function showSong(song) {
   for (var i = 1; i <= 9; i++) capoOpts += '<option value="' + i + '">Traste ' + i + '</option>';
   view.innerHTML =
     '<div class="shead"><div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, srcLabel(song), song.tuning].filter(Boolean).join(' · ')) + '</p></div>' +
-    '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="export">Exportar</button><button class="btn primary" data-act="edit">Editar</button></div></div>' +
+    '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
     '<div class="controls" id="controls">' +
       '<div class="grp"><span class="lab">Transponer</span><button class="btn sq" data-act="tm" aria-label="Bajar un semitono">−</button><output id="tval">0</output><button class="btn sq" data-act="tp" aria-label="Subir un semitono">+</button><button class="btn" data-act="t0">Original</button></div>' +
       '<div class="grp"><label class="lab" for="capo">Cejilla</label><select id="capo">' + capoOpts + '</select></div>' +
@@ -317,6 +319,7 @@ function stopAuto() {
 /* ---------- Editor ---------- */
 var NEW_BODY = '{intro: Am - F - C - G}\n\n[Am]Escribe la primera línea con el acorde [F]justo antes de la sílaba\n[C]donde cae cada cambio, y sigue con la [G]siguiente\n';
 function openEditor(id, review) {
+  if (!editable()) return;
   if (!review) imp.cancel();
   stopAuto(); hidePop();
   S.view = 'edit'; S.pos = {}; S.review = review || null; S.revI = 0;
@@ -431,6 +434,7 @@ function dgOut() {
   return { frets: dgS.frets.slice(), base: dgS.base, barre: dgS.barre.on ? { fret: dgS.barre.fret, from: dgS.barre.from, to: dgS.barre.to } : null };
 }
 function openDg(orig, start) {
+  if (!editable()) return;
   dgTarget = cur();
   var cust = dgTarget.diagrams && dgTarget.diagrams[orig];
   var b = start || cust || shapeFor(parseChord(orig)) || { frets: [-1, -1, -1, -1, -1, -1], base: 1, barre: null };
@@ -497,7 +501,7 @@ function renderPop() {
       '<span>' + (i + 1) + ' de ' + n + (P.list[i].custom ? ' · propio' : '') + '</span>' +
       '<button class="btn sq" type="button" data-pop="next" aria-label="Posición siguiente">›</button></div>';
   } else h += '<div class="blank">?</div><p class="hint">No hay una forma conocida para este acorde.</p>';
-  if (pc.ctx.ss === 0) h += '<button class="btn" type="button" data-pop="edit">' + (n ? 'Editar esta forma' : 'Dibujar') + '</button>';
+  if (pc.ctx.ss === 0 && editable()) h += '<button class="btn" type="button" data-pop="edit">' + (n ? 'Editar esta forma' : 'Dibujar') + '</button>';
   pop.innerHTML = h;
 }
 function placePop(el) {
@@ -521,6 +525,7 @@ function hidePopSoon() { clearTimeout(popT); popT = setTimeout(hidePop, 180); }
 $('#goHome').addEventListener('click', function () { if (user && !denied) renderLibrary(); });
 $('#newSong').addEventListener('click', function () { imp.cancel(); openEditor(null); });
 $('#signOut').addEventListener('click', function () { api.signOut(); });
+$('#signInTop').addEventListener('click', function () { api.signIn().catch(function (err) { toast('No se pudo iniciar sesión: ' + ((err && err.message) || 'error'), true); }); });
 $('#importBtn').addEventListener('click', function () { stopAuto(); hidePop(); S.review = null; S.view = 'import'; imp.render(); });
 
 view.addEventListener('click', function (e) {

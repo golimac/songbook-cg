@@ -1,14 +1,20 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Solo entra el dueño del cancionero. Reemplaza el correo antes de publicar estas reglas en la consola.
+    // Cualquiera con el enlace puede leer (modo invitado). Solo el dueño puede escribir.
+    // Reemplaza el correo antes de publicar estas reglas en la consola.
     function dueno() {
       return request.auth != null
         && request.auth.token.email_verified == true
         && request.auth.token.email == 'REEMPLAZA_CON_TU_CORREO@gmail.com';
     }
-    match /{document=**} {
-      allow read, write: if dueno();
+    match /songs/{id} {
+      allow read: if true;
+      allow write: if dueno();
+    }
+    match /bodies/{id} {
+      allow read: if true;
+      allow write: if dueno();
     }
   }
 }
