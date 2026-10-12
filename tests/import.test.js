@@ -63,15 +63,13 @@ click($('#signInTop')); await wait();
 ok('hay botón de importar fotos', $('#importBtn').hidden === false);
 click($('#importBtn'));
 ok('muestra el formulario de importación', !!$('#imForm') && !!$('#imFiles'));
-type($('#imSrc'), 'Cancionero 1');
-type($('#imPage'), '52');
+ok('el formulario solo pide las fotos', !$('#imSrc') && !$('#imPage'));
 click($('#imCancel')); await wait();
 ok('cancelar vuelve a la biblioteca sin guardar', !!$('#q') && metas.size === 0);
 
 click($('#importBtn'));
 $('#imForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 ok('sin fotos pide elegir una', !!$('.toast.err') && !$('#imStage'));
-type($('#imSrc'), 'Cancionero 1'); type($('#imPage'), '51');
 Object.defineProperty($('#imFiles'), 'files', { value: [new w.File(['x'], 'p52.jpg', { type: 'image/jpeg' })] });
 $('#imForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 await wait(30);
@@ -103,7 +101,7 @@ click($('#imGo')); await wait(30);
 ok('si falla la lectura ofrece reintentar', !!$('#imRetry') && /saldo insuficiente/.test($('h1').textContent + d.body.textContent));
 click($('#imRetry')); await wait(30);
 const tr = reads.filter((r) => r.mode === 'transcribe');
-ok('une el recuadro continuación con su canción', tr[1].images.length === 2 && /página 52/.test(tr[1].hint) && /Cancionero 1/.test(tr[1].hint));
+ok('une el recuadro continuación con su canción', tr[1].images.length === 2);
 ok('la canción de un solo recuadro va con una imagen', tr.length === 2 || tr.some((x) => x.images.length === 1));
 
 // ---- revisión de la primera canción ----
@@ -122,7 +120,7 @@ ok('corregir la duda la quita de la lista', /Sin dudas pendientes/.test($('#revD
 $('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 await wait();
 const first = [...metas.values()][0];
-ok('guardó con estado revisada, cancionero y página', first.status === 'revisada' && first.source === 'Cancionero 1' && first.page === '52' && first.doubts === 0);
+ok('guardó con estado revisada', first.status === 'revisada' && first.doubts === 0);
 
 // ---- segunda canción: una foto, con duda que se deja ----
 ok('pasa a la segunda canción', /Canción 2 de 2/.test($('#rev').textContent) && /Un viejo y un/.test($('#fBody').value));
@@ -134,7 +132,6 @@ await wait();
 const statuses = [...metas.values()].map((m) => m.status).sort();
 ok('con duda sin resolver queda "dudas"', statuses.join() === 'dudas,revisada');
 ok('termina en la biblioteca con las dos canciones y el aviso', !!$('#q') && $$('.item').length === 2 && /2 canciones guardadas/.test($$('.toast').pop().textContent));
-ok('la lista muestra cancionero y página', /Cancionero 1 · p\. 52/.test($('.item').textContent));
 ok('no queda importación activa', !$('#imStage'));
 
 // ---- saltar y terminar ----

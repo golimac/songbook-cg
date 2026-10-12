@@ -4,12 +4,10 @@ import { convertSolfege } from './core.js';
 
 export function createImporter(d) {
   // d: { view, esc, toast, api, imaging, uid, openReview(review), finish(savedCount) }
-  var I = { active: false, run: 0, files: [], fi: 0, saved: 0, h: null, boxes: [], pageVal: '', nextPage: '', cancionero: '' };
+  var I = { active: false, run: 0, files: [], fi: 0, saved: 0, h: null, boxes: [] };
   var view = d.view, esc = d.esc;
   var drag = null;
 
-  function remember(k, v) { try { localStorage.setItem('songbookcg.' + k, v); } catch (e) { /* sin almacenamiento */ } }
-  function recall(k) { try { return localStorage.getItem('songbookcg.' + k) || ''; } catch (e) { return ''; } }
   function errMsg(e) { return (e && e.message) || 'error desconocido'; }
   function mine(run) { return I.active && run === I.run; }
 
@@ -19,12 +17,9 @@ export function createImporter(d) {
     view.innerHTML = '<h1>Importar fotos</h1>' +
       '<p class="hint" style="margin-top:6px">Una foto por página. El sistema encuentra las canciones, tú ajustas los recuadros, y después revisas cada transcripción junto a la foto.</p>' +
       '<form class="form" id="imForm" style="margin-top:16px;max-width:560px" autocomplete="off">' +
-        '<div class="row"><label class="f">Cancionero<input type="text" id="imSrc" placeholder="Nombre del cancionero"></label>' +
-        '<label class="f">Página de la primera foto<input type="text" id="imPage" inputmode="numeric"></label></div>' +
         '<label class="f">Fotos<input type="file" id="imFiles" accept="image/*" multiple></label>' +
         '<div class="actions"><button class="btn primary" type="submit">Empezar</button><button class="btn" type="button" id="imCancel">Cancelar</button></div>' +
       '</form>';
-    $('#imSrc').value = recall('cancionero');
   }
   function $(s) { return view.querySelector(s); }
 
@@ -57,7 +52,6 @@ export function createImporter(d) {
         if (!mine(run)) return;
         var songs = r && r.songs && r.songs.length ? r.songs : [{ title: '', box: { x: 0.05, y: 0.05, w: 0.9, h: 0.9 }, continues: null, note: '' }];
         I.boxes = songs.map(function (s) { return { title: s.title || '', box: s.box, continues: s.continues == null ? null : s.continues, note: s.note || '' }; });
-        I.pageVal = (r && r.page_number) || I.nextPage || '';
         renderSeg();
       });
     }).catch(function (e) {
@@ -115,7 +109,7 @@ export function createImporter(d) {
       var title = g.title || 'canción ' + (gi + 1);
       view.innerHTML = '<h1>Leyendo</h1><p class="hint" style="margin-top:6px">Canción ' + (gi + 1) + ' de ' + groups.length + ': ' + esc(title) + '. Tarda entre 20 y 60 segundos.</p>';
       var images = g.indices.map(function (i) { return d.imaging.crop(I.h, I.boxes[i].box); });
-      var hint = [I.cancionero ? 'Cancionero: ' + I.cancionero : '', I.pageVal ? 'página ' + I.pageVal : '', g.title ? 'título detectado: ' + g.title : ''].filter(Boolean).join(', ');
+      var hint = [g.title ? 'título detectado: ' + g.title : ''].filter(Boolean).join(', ');
       d.api.readPage({ mode: 'transcribe', images: images, hint: hint }).then(function (r) {
         if (!mine(run)) return;
         results.push({ group: g, result: r, images: images });
@@ -144,7 +138,7 @@ export function createImporter(d) {
       var it = results[k], r = it.result;
       var song = {
         id: d.uid(), title: r.title || it.group.title || 'Sin título', artist: r.artist || '', key: r.key || '', tuning: r.tuning || '',
-        source: I.cancionero, page: I.pageVal, status: 'pendiente', body: convertSolfege(r.body || ''), diagrams: {}, doubts: 0
+        status: 'pendiente', body: convertSolfege(r.body || ''), diagrams: {}, doubts: 0
       };
       k++;
       d.openReview({
@@ -163,8 +157,6 @@ export function createImporter(d) {
   function nextPhoto() {
     release();
     I.fi++;
-    var n = parseInt(I.pageVal, 10);
-    I.nextPage = isNaN(n) ? '' : String(n + 1);
     if (I.fi >= I.files.length) { finish(); return; }
     beginPhoto();
   }
@@ -177,9 +169,6 @@ export function createImporter(d) {
     if (!files.length) { d.toast('Elige al menos una foto.', true); return; }
     I.files = files.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
     I.fi = 0; I.saved = 0;
-    I.cancionero = $('#imSrc').value.trim();
-    remember('cancionero', I.cancionero);
-    I.nextPage = $('#imPage').value.trim();
     beginPhoto();
   });
 

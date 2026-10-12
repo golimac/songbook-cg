@@ -175,7 +175,6 @@ function renderLibrary() {
   $('#q').value = S.q;
   fillList();
 }
-function srcLabel(s) { return s.source ? s.source + (s.page ? ' · p. ' + s.page : '') : ''; }
 function fillList() {
   if (S.view !== 'library') return;
   if (!listLoaded) { $('#count').textContent = ''; $('#list').innerHTML = '<p class="hint">Cargando biblioteca…</p>'; return; }
@@ -199,7 +198,7 @@ function fillList() {
       '<span class="it-chips">' + (k ? '<span class="chip">' + esc(s.key) + '</span>' : '') +
       (n ? '<span class="chip warn">' + n + (n === 1 ? ' duda' : ' dudas') + '</span>' : '') +
       '<span class="chip ' + st[1] + '">' + st[0] + '</span></span>' +
-      '<span class="it-sub">' + esc([s.artist, srcLabel(s)].filter(Boolean).join(' · ')) + '</span></button>';
+      '<span class="it-sub">' + esc([s.artist].filter(Boolean).join(' · ')) + '</span></button>';
   }).join('') : '<p class="hint">No hay canciones que coincidan.</p>';
 }
 
@@ -252,7 +251,7 @@ function showSong(song) {
   var capoOpts = '<option value="0">Sin cejilla</option>';
   for (var i = 1; i <= 9; i++) capoOpts += '<option value="' + i + '">Traste ' + i + '</option>';
   view.innerHTML =
-    '<div class="shead"><div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, srcLabel(song), song.tuning].filter(Boolean).join(' · ')) + '</p></div>' +
+    '<div class="shead"><div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, song.tuning].filter(Boolean).join(' · ')) + '</p></div>' +
     '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
     '<div class="controls" id="controls">' +
       '<div class="grp"><span class="lab">Transponer</span><button class="btn sq" data-act="tm" aria-label="Bajar un semitono">−</button><output id="tval">0</output><button class="btn sq" data-act="tp" aria-label="Subir un semitono">+</button><button class="btn" data-act="t0">Original</button></div>' +
