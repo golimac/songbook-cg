@@ -121,6 +121,25 @@ eq('Bdim7 en cuatro inversiones', C.shapesFor(C.parseChord('Bdim7')).length, 5);
 eq('G7/9 sigue sin forma', C.shapesFor(C.parseChord('G7/9')).length, 0);
 eq('A* sin formas de biblioteca', C.shapesFor(C.parseChord('A*')).length, 0);
 
+
+// solfeo a letras
+const cv = (x) => C.convertSolfege(x);
+eq('solfeo: acordes entre corchetes', cv('[LAm]El [DO]sol [SOL7]va'), '[Am]El [C]sol [G7]va');
+eq('solfeo: no toca la letra', cv('Si el sol se va'), 'Si el sol se va');
+eq('solfeo: línea de acordes con bajo y grupo', cv('> REm-SOL7-(SOL7/9) DO(DO4-DO-SOL7-DO) RE/FA'), '> Dm-G7-(G7/9) C(C4-C-G7-C) D/F');
+eq('solfeo: sostenidos, bemoles, disminuido', cv('[FA#7] [SIbm] [SId7] [LAd] [SOL#m]'), '[F#7] [Bbm] [Bdim7] [Adim] [G#m]');
+eq('solfeo: intro con figuras sin tocar', cv('{intro: SOL - LAd - MIm (50-60-62)}'), '{intro: G - Adim - Em (50-60-62)}');
+eq('solfeo: estrella y 4/9', cv('[LA*] [SOL4/9] [FA7+]'), '[A*] [G4/9] [F7+]');
+eq('solfeo: tablatura intacta', cv('{sot}\nSOL|--0--|\n{eot}'), '{sot}\nSOL|--0--|\n{eot}');
+eq('solfeo: ilegible queda para revisar', cv('[Sld7]'), '[Sld7]');
+
+// lista de dudas con posición
+const bd = '[Am]hola [Sld7]mundo [E7?]fin\n> G D? Zz\n{intro: Am - F (50-5?-52)}\n{c: [no es acorde]}\n{sot}\n[Zz]\n{eot}';
+const dl = C.listDoubts(bd);
+eq('dudas: cantidad y tipos', dl.map((x) => x.kind + ':' + x.text), ['ilegible:Sld7', 'incierto:E7?', 'incierto:D?', 'ilegible:Zz', 'figura:(50-5?-52)']);
+eq('dudas: posiciones apuntan al texto', dl.every((x) => bd.slice(x.start, x.end) === x.text), true);
+eq('dudas: coincide con el contador', dl.length, C.countDoubts(C.parseBody(bd)));
+
 // ChordPro
 const cp = C.toChordPro({ title: 'Prueba', artist: 'X', key: 'Am', body: '{intro: Am - F}\n[Am]hola [F]mundo\n> G D' });
 console.log('--- ChordPro ---\n' + cp);

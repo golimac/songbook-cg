@@ -72,6 +72,22 @@ export function createFirebaseApi() {
       return b.commit();
     },
 
+    // Envía una foto o recorte a la función de Vercel que la lee con el modelo de visión.
+    async readPage(payload) {
+      const u = auth.currentUser;
+      if (!u) throw new Error('Inicia sesión primero.');
+      const token = await u.getIdToken();
+      const r = await fetch('/api/read', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+      let j = null;
+      try { j = await r.json(); } catch (e) { /* respuesta sin JSON */ }
+      if (!r.ok) throw new Error((j && j.error) || 'La lectura falló (' + r.status + ').');
+      return j;
+    },
+
     saveMany(songs) {
       const b = writeBatch(db);
       songs.forEach((song) => {

@@ -1,4 +1,7 @@
 {
   "outputDirectory": "public",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "functions": {
+    "api/read.js": { "maxDuration": 60 }
+  }
 }

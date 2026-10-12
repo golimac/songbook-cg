@@ -296,8 +296,71 @@ function toChordPro(song) {
   return out.join('\n');
 }
 
+/* Cifrado en solfeo (DO RE MI FA SOL LA SI) a letras inglesas. Solo toca acordes: dentro de [..] y en líneas de acordes (> e intro). */
+var SOLFEGE = { DO: 'C', RE: 'D', MI: 'E', FA: 'F', SOL: 'G', LA: 'A', SI: 'B' };
+function solToLetter(text) {
+  return text.replace(/(^|[^A-Za-z#])(DO|RE|MI|FA|SOL|LA|SI)(#|b)?([a-z]*)/g, function (all, pre, note, acc, q) {
+    if (q.indexOf('dim') !== 0 && q.charAt(0) === 'd') q = 'dim' + q.slice(1);
+    return pre + SOLFEGE[note] + (acc || '') + q;
+  });
+}
+function convertSolfege(body) {
+  var inTab = false;
+  return String(body || '').split('\n').map(function (line) {
+    var t = line.trim();
+    if (/^\{(sot|start_of_tab)\}$/i.test(t)) { inTab = true; return line; }
+    if (/^\{(eot|end_of_tab)\}$/i.test(t)) { inTab = false; return line; }
+    if (inTab) return line;
+    if (/^\{(intro|outro|interludio)\s*:/i.test(t)) return line.replace(/^(\s*\{[^:]*:)(.*)(\}\s*)$/, function (a, h, c, e) { return h + solToLetter(c) + e; });
+    if (/^\{/.test(t) || t.charAt(0) === '#') return line;
+    if (t.charAt(0) === '>') return line.replace(/^(\s*>)(.*)$/, function (a, h, c) { return h + solToLetter(c); });
+    return line.replace(/\[([^\]]*)\]/g, function (a, c) { return '[' + solToLetter(c) + ']'; });
+  }).join('\n');
+}
+
+/* Dudas del texto con su posición (índices de carácter dentro del cuerpo) para saltar a ellas en el editor */
+function listDoubts(body) {
+  var out = [], lines = String(body || '').split('\n'), off = 0, inTab = false;
+  function scanChords(str, base, line) {
+    var re = /\([^)]*\)|[^\s\-·()]+/g, m;
+    while ((m = re.exec(str))) {
+      var tk = m[0], at = base + m.index;
+      if (tk.charAt(0) === '(' && tk.charAt(tk.length - 1) === ')') {
+        var inner = tk.slice(1, -1);
+        if (/^[\dIVXivx?\s\-]*$/.test(inner)) { if (inner.indexOf('?') >= 0) out.push({ text: tk, kind: 'figura', line: line, start: at, end: at + tk.length }); }
+        else scanChords(inner, at + 1, line);
+      } else {
+        var c = parseChord(tk);
+        if (!c) out.push({ text: tk, kind: 'ilegible', line: line, start: at, end: at + tk.length });
+        else if (c.doubt) out.push({ text: tk, kind: 'incierto', line: line, start: at, end: at + tk.length });
+      }
+    }
+  }
+  lines.forEach(function (raw, i) {
+    var t = raw.trim(), lead = raw.length - raw.replace(/^\s+/, '').length;
+    if (/^\{(sot|start_of_tab)\}$/i.test(t)) inTab = true;
+    else if (/^\{(eot|end_of_tab)\}$/i.test(t)) inTab = false;
+    else if (!inTab) {
+      var m;
+      if ((m = /^(\{(?:intro|outro|interludio)\s*:\s*)(.*?)(\}\s*)$/i.exec(raw.slice(lead)))) scanChords(m[2], off + lead + m[1].length, i);
+      else if (t.charAt(0) === '{' || t.charAt(0) === '#') { /* nota, alternativa o comentario */ }
+      else if (t.charAt(0) === '>') scanChords(raw.slice(lead + 1), off + lead + 1, i);
+      else {
+        var re2 = /\[([^\]]*)\]/g, mm;
+        while ((mm = re2.exec(raw))) {
+          var c2 = parseChord(mm[1]);
+          if (!c2) out.push({ text: mm[1], kind: 'ilegible', line: i, start: off + mm.index + 1, end: off + mm.index + 1 + mm[1].length });
+          else if (c2.doubt) out.push({ text: mm[1], kind: 'incierto', line: i, start: off + mm.index + 1, end: off + mm.index + 1 + mm[1].length });
+        }
+      }
+    }
+    off += raw.length + 1;
+  });
+  return out;
+}
+
 export {
   parseChord, chordToString, chordPc, transposeChord, parseKey, flatsFor, keyName,
   tokenizeLine, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
-  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro
+  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts
 };

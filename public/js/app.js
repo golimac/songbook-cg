@@ -1,10 +1,13 @@
 import {
   parseChord, chordToString, transposeChord, parseKey, flatsFor, keyName, parseBody, collectChords,
-  countDoubts, hasUntransposable, inferKey, shapesFor, shapeFor, diagramFor, toChordPro
+  countDoubts, hasUntransposable, inferKey, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts
 } from './core.js';
+import { imaging as realImaging } from './photo.js';
+import { createImporter } from './import.js';
 
 /* Songbook CG · aplicación. Recibe la capa de datos (Firebase en producción, una simulada en las pruebas). */
-export function start(api) {
+export function start(api, options) {
+var cfg = options || {};
 var $ = function (s, r) { return (r || document).querySelector(s); };
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function norm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
@@ -34,10 +37,18 @@ var SAMPLES = [
 var songs = [];            // datos livianos de la lista, en vivo desde Firestore
 var listLoaded = false;
 var user = null, unsub = null, denied = false;
-var S = { view: 'library', id: null, song: null, shift: 0, capo: 0, fs: 13, dg: true, auto: false, dur: 150, q: '', draft: null, isNew: false, pos: {} };
+var S = { view: 'library', id: null, song: null, shift: 0, capo: 0, fs: 13, dg: true, auto: false, dur: 150, q: '', draft: null, isNew: false, pos: {}, review: null, revI: 0 };
 var view = $('#view');
 function cur() { return S.view === 'edit' ? S.draft : S.song; }
 function failSave(e) { toast('No se pudo guardar: ' + ((e && e.message) || 'error desconocido'), true); }
+var imp = createImporter({
+  view: view, esc: esc, toast: toast, api: api, imaging: cfg.imaging || realImaging, uid: uid,
+  openReview: function (rv) { openEditor(null, rv); },
+  finish: function (n, cancelled) {
+    renderLibrary();
+    if (!cancelled) toast(n ? n + (n === 1 ? ' canción guardada.' : ' canciones guardadas.') : 'No se guardó ninguna canción.');
+  }
+});
 
 
 /* ---------- Contexto de una canción ---------- */
@@ -154,7 +165,8 @@ function stripHTML(song, ctx) {
 /* ---------- Biblioteca ---------- */
 var STATUS = { pendiente: ['Pendiente', ''], dudas: ['Con dudas', 'warn'], revisada: ['Revisada', 'ok'] };
 function renderLibrary() {
-  stopAuto(); hidePop();
+  imp.cancel(); stopAuto(); hidePop();
+  S.review = null;
   S.view = 'library'; S.song = null;
   view.innerHTML = '<div class="libhead"><h1>Biblioteca</h1></div>' +
     '<input id="q" type="search" placeholder="Buscar por título, artista o fuente" autocomplete="off" aria-label="Buscar canciones">' +
@@ -190,7 +202,7 @@ function fillList() {
 
 /* ---------- Acceso ---------- */
 function renderLogin() {
-  stopAuto(); hidePop();
+  imp.cancel(); stopAuto(); hidePop();
   S.view = 'login';
   view.innerHTML = '<div class="login"><h1>Songbook CG</h1><p class="hint">Tu cancionero personal. Entra con tu cuenta de Google.</p>' +
     '<button class="btn primary" id="signIn">Entrar con Google</button></div>';
@@ -206,7 +218,7 @@ function applyAuth(u) {
   songs = []; listLoaded = false;
   var on = !!u;
   $('#who').hidden = !on; $('#who').textContent = on ? u.email : '';
-  $('#signOut').hidden = !on; $('#newSong').hidden = !on;
+  $('#signOut').hidden = !on; $('#newSong').hidden = !on; $('#importBtn').hidden = !on;
   if (!on) { renderLogin(); return; }
   renderLibrary();
   unsub = api.subscribeSongs(function (list) {
@@ -233,7 +245,7 @@ function openSong(id) {
   });
 }
 function showSong(song) {
-  stopAuto(); hidePop();
+  imp.cancel(); S.review = null; stopAuto(); hidePop();
   S.view = 'song'; S.id = song.id; S.song = song; S.shift = 0; S.capo = 0; S.pos = {};
   var capoOpts = '<option value="0">Sin cejilla</option>';
   for (var i = 1; i <= 9; i++) capoOpts += '<option value="' + i + '">Traste ' + i + '</option>';
@@ -304,16 +316,21 @@ function stopAuto() {
 }
 /* ---------- Editor ---------- */
 var NEW_BODY = '{intro: Am - F - C - G}\n\n[Am]Escribe la primera línea con el acorde [F]justo antes de la sílaba\n[C]donde cae cada cambio, y sigue con la [G]siguiente\n';
-function openEditor(id) {
+function openEditor(id, review) {
+  if (!review) imp.cancel();
   stopAuto(); hidePop();
-  S.view = 'edit'; S.pos = {};
-  if (id) { S.draft = clone(S.song); S.isNew = false; }
+  S.view = 'edit'; S.pos = {}; S.review = review || null; S.revI = 0;
+  if (review) { S.draft = review.song; S.isNew = true; }
+  else if (id) { S.draft = clone(S.song); S.isNew = false; }
   else { S.draft = { id: uid(), title: 'Canción nueva', artist: '', key: '', tuning: '', source: '', page: '', status: 'pendiente', body: NEW_BODY, diagrams: {} }; S.isNew = true; }
   var d = S.draft;
   var stOpts = Object.keys(STATUS).map(function (k) { return '<option value="' + k + '"' + (d.status === k ? ' selected' : '') + '>' + STATUS[k][0] + '</option>'; }).join('');
   view.innerHTML =
-    '<div class="shead"><h1>' + (S.isNew ? 'Nueva canción' : 'Editar canción') + '</h1></div>' +
-    '<div class="ed" style="margin-top:16px">' +
+    '<div class="shead"><h1>' + (review ? 'Revisar canción' : S.isNew ? 'Nueva canción' : 'Editar canción') + '</h1></div>' +
+    '<div class="ed' + (review ? ' rv' : '') + '" style="margin-top:16px">' +
+    (review ? '<aside class="revcol" id="rev"><p class="revlab">' + esc(review.label) + '</p><div id="revDoubt"></div>' +
+      (review.remarks ? '<p class="revrem"><b>Del papel:</b> ' + esc(review.remarks) + '</p>' : '') +
+      '<div class="revimg" id="revImg">' + review.crops.map(function (c) { return '<img src="' + esc(c) + '" alt="Foto de la canción">'; }).join('') + '</div></aside>' : '') +
     '<form class="form" id="edForm" autocomplete="off">' +
       '<div class="row"><label class="f">Título<input type="text" id="fTitle"></label><label class="f">Artista<input type="text" id="fArtist"></label></div>' +
       '<div class="row"><label class="f">Tonalidad<input type="text" id="fKey" placeholder="Am, G, Bb"></label>' +
@@ -332,14 +349,67 @@ function openEditor(id) {
         '<li><code>A*</code> marca una variante de posición con su propio diagrama.</li>' +
         '<li><code>[Sld7]</code>, <code>[Am?]</code> y <code>(62-5?)</code> marcan una duda en ámbar.</li>' +
       '</ul></details>' +
-      '<div class="actions"><button type="submit" class="btn primary">Guardar</button><button type="button" class="btn" id="edCancel">Cancelar</button>' +
-        (S.isNew ? '' : '<button type="button" class="btn danger" id="edDel">Eliminar canción</button>') + '</div>' +
+      (review
+        ? '<div class="actions"><button type="submit" class="btn primary">Guardar y seguir</button><button type="button" class="btn" id="edSkip">Saltar esta canción</button><button type="button" class="btn" id="edAbort">Terminar importación</button></div>'
+        : '<div class="actions"><button type="submit" class="btn primary">Guardar</button><button type="button" class="btn" id="edCancel">Cancelar</button>' +
+          (S.isNew ? '' : '<button type="button" class="btn danger" id="edDel">Eliminar canción</button>') + '</div>') +
     '</form>' +
     '<aside class="pv"><div class="pvh"><span>Vista previa</span><span id="pvN"></span></div><div class="dgs" id="edDg"></div><article class="song" id="pv"></article></aside></div>';
   $('#fTitle').value = d.title; $('#fArtist').value = d.artist; $('#fKey').value = d.key;
   $('#fTuning').value = d.tuning; $('#fSource').value = d.source; $('#fPage').value = d.page || ''; $('#fBody').value = d.body;
   refreshPreview();
+  if (review) {
+    var im = $('#revImg img');
+    if (im) im.addEventListener('load', revRender);
+  }
   window.scrollTo(0, 0);
+}
+
+/* ---------- Revisión: dudas junto a la foto ---------- */
+var KIND = { ilegible: 'No se lee como acorde', incierto: 'Lectura incierta', figura: 'Figura incompleta' };
+function revDoubts() {
+  var rv = S.review; if (!rv) return [];
+  var seen = {};
+  return listDoubts(S.draft.body).map(function (x) {
+    var k = seen[x.text] = (seen[x.text] || 0);
+    seen[x.text]++;
+    var md = rv.doubts.filter(function (m) { return m.text === x.text; })[k];
+    x.model = md || null;
+    return x;
+  });
+}
+function zoomBox(b) {
+  var w = Math.min(1, Math.max(b.w + 0.08, 0.35)), h = Math.min(1, Math.max(b.h + 0.04, 0.1));
+  return { x: Math.max(0, Math.min(1 - w, b.x + b.w / 2 - w / 2)), y: Math.max(0, Math.min(1 - h, b.y + b.h / 2 - h / 2)), w: w, h: h };
+}
+function revRender() {
+  var rv = S.review, el = $('#revDoubt'); if (!rv || !el) return;
+  var list = revDoubts();
+  if (!list.length) { el.innerHTML = '<span class="chip ok">Sin dudas pendientes</span>'; return; }
+  S.revI = Math.max(0, Math.min(list.length - 1, S.revI));
+  var x = list[S.revI];
+  var h = '<div class="rvnav"><button class="btn sq" type="button" data-rev="prev" aria-label="Duda anterior">‹</button>' +
+    '<span>Duda ' + (S.revI + 1) + ' de ' + list.length + '</span>' +
+    '<button class="btn sq" type="button" data-rev="next" aria-label="Duda siguiente">›</button></div>' +
+    '<p class="rvq"><code class="doubt">' + esc(x.text) + '</code> <span class="hint">' + esc(KIND[x.kind] || '') + '</span></p>' +
+    (x.model && x.model.note ? '<p class="hint">' + esc(x.model.note) + '</p>' : '');
+  if (x.model && x.model.box && rv.crops.length === 1) {
+    var z = zoomBox(x.model.box), im = $('#revImg img');
+    var cw = im && im.naturalWidth, ch = im && im.naturalHeight;
+    var aspect = cw && ch ? (z.w * cw) / (z.h * ch) : (z.w / z.h) * 0.75;
+    var pw = z.w >= 1 ? 0 : (z.x / (1 - z.w)) * 100, ph = z.h >= 1 ? 0 : (z.y / (1 - z.h)) * 100;
+    h += '<div class="zoom" role="img" aria-label="Ampliación de la duda" style="aspect-ratio:' + aspect.toFixed(3) + ';background-image:url(' + "'" + rv.crops[0] + "'" + ');background-size:' + (100 / z.w).toFixed(2) + '% auto;background-position:' + pw.toFixed(2) + '% ' + ph.toFixed(2) + '%"></div>';
+  }
+  el.innerHTML = h;
+}
+function revGo(step) {
+  var list = revDoubts(); if (!list.length) return;
+  S.revI = (S.revI + step + list.length) % list.length;
+  revRender();
+  var x = list[S.revI], ta = $('#fBody'); if (!ta) return;
+  ta.focus(); ta.setSelectionRange(x.start, x.end);
+  var lh = parseFloat(window.getComputedStyle(ta).lineHeight) || 20;
+  ta.scrollTop = Math.max(0, x.line * lh - ta.clientHeight / 2);
 }
 function refreshPreview() {
   var d = S.draft;
@@ -348,6 +418,7 @@ function refreshPreview() {
   $('#pvN').innerHTML = n ? '<span class="chip warn">' + n + (n === 1 ? ' duda' : ' dudas') + '</span>' : '';
   $('#edDg').innerHTML = stripHTML(d, ctx);
   $('#pv').innerHTML = blocksHTML(ctx.blocks, ctx, 'edit');
+  if (S.review) revRender();
 }
 function readForm() {
   var d = S.draft;
@@ -448,8 +519,9 @@ function hidePopSoon() { clearTimeout(popT); popT = setTimeout(hidePop, 180); }
 
 /* ---------- Eventos ---------- */
 $('#goHome').addEventListener('click', function () { if (user && !denied) renderLibrary(); });
-$('#newSong').addEventListener('click', function () { openEditor(null); });
+$('#newSong').addEventListener('click', function () { imp.cancel(); openEditor(null); });
 $('#signOut').addEventListener('click', function () { api.signOut(); });
+$('#importBtn').addEventListener('click', function () { stopAuto(); hidePop(); S.review = null; S.view = 'import'; imp.render(); });
 
 view.addEventListener('click', function (e) {
   var t = e.target;
@@ -495,12 +567,22 @@ view.addEventListener('submit', function (e) {
   var d = S.draft;
   if (!d.title.trim()) d.title = 'Sin título';
   d.doubts = countDoubts(parseBody(d.body));
+  if (S.review) {
+    if (d.status === 'pendiente') d.status = d.doubts ? 'dudas' : 'revisada';
+    api.saveSong(d, true).catch(failSave);
+    var rv = S.review; S.review = null;
+    rv.onSave(d);
+    return;
+  }
   api.saveSong(d, S.isNew).catch(failSave);
   showSong(d);
 });
 var delArmed = null;
 view.addEventListener('click', function (e) {
-  if (e.target.id === 'edCancel') { if (S.isNew) renderLibrary(); else showSong(S.song); }
+  if (e.target.id === 'edSkip' && S.review) { var r1 = S.review; S.review = null; r1.onSkip(); }
+  else if (e.target.id === 'edAbort' && S.review) { var r2 = S.review; S.review = null; r2.onAbort(); }
+  else if (e.target.getAttribute && e.target.getAttribute('data-rev')) revGo(e.target.getAttribute('data-rev') === 'next' ? 1 : -1);
+  else if (e.target.id === 'edCancel') { if (S.isNew) renderLibrary(); else showSong(S.song); }
   else if (e.target.id === 'edDel') {
     var b = e.target;
     if (!delArmed) {
