@@ -43,6 +43,8 @@ function defaultFs() { try { return window.matchMedia('(pointer: coarse)').match
 var S = { view: 'library', id: null, song: null, shift: 0, capo: 0, fs: defaultFs(), dg: true, auto: false, dur: 150, q: '', draft: null, isNew: false, pos: {}, review: null, revI: 0 };
 var view = $('#view');
 function editable() { return !!user; }
+/* Los botones de forma principal y de editar diagramas salen solo con el editor de la canción abierto, no al leer. */
+function inEdit() { return !!user && S.view === 'edit'; }
 function cur() { return S.view === 'edit' ? S.draft : S.song; }
 function failSave(e) { toast((e && e.code === 'permission-denied') ? 'Esta cuenta no tiene permiso para editar.' : 'No se pudo guardar: ' + ((e && e.message) || 'error desconocido'), true); }
 var imp = createImporter({
@@ -163,7 +165,7 @@ function posIndex(P) {
   return n ? (((S.pos[P.disp] || 0) % n) + n) % n : 0;
 }
 function stripHTML(song, ctx, ro) {
-  var can = !ro && ctx.ss === 0 && editable();
+  var can = !ro && ctx.ss === 0 && inEdit();
   return collectChords(ctx.blocks).map(function (it) {
     var P = positionsFor(song, ctx, it.orig);
     var tag = can ? 'button' : 'div';
@@ -883,11 +885,11 @@ function renderPop() {
       '<span>' + (i + 1) + ' de ' + n + (P.list[i].custom ? ' · propio' : '') + '</span>' +
       '<button class="btn sq" type="button" data-pop="next" aria-label="Posición siguiente">›</button></div>';
   } else h += '<div class="blank">?</div><p class="hint">No hay una forma conocida para este acorde.</p>';
-  if (pc.ctx.ss === 0 && editable() && n > 1) {
+  if (pc.ctx.ss === 0 && inEdit() && n > 1) {
     if (i > 0) h += '<button class="btn" type="button" data-pop="pref">Usar como principal</button>';
     else if (P.pref) h += '<button class="btn" type="button" data-pop="unpref">Quitar como principal</button>';
   }
-  if (pc.ctx.ss === 0 && editable()) h += '<button class="btn" type="button" data-pop="edit">' + (n ? 'Editar esta forma' : 'Dibujar') + '</button>';
+  if (pc.ctx.ss === 0 && inEdit()) h += '<button class="btn" type="button" data-pop="edit">' + (n ? 'Editar esta forma' : 'Dibujar') + '</button>';
   pop.innerHTML = h;
 }
 function placePop(el) {
@@ -1106,7 +1108,7 @@ pop.addEventListener('click', function (e) {
   if (act === 'prev' || act === 'next') {
     S.pos[P.disp] = posIndex(P) + (act === 'next' ? 1 : -1);
     renderPop(); refreshStrip();
-  } else if ((act === 'pref' || act === 'unpref') && editable() && pc.ctx.ss === 0) {
+  } else if ((act === 'pref' || act === 'unpref') && inEdit() && pc.ctx.ss === 0) {
     var cur = P.list[posIndex(P)];
     pc.song.prefs = pc.song.prefs || {};
     if (act === 'pref' && cur) pc.song.prefs[popFor.orig] = cur.d.frets.join(',');

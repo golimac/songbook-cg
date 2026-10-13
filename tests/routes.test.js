@@ -98,21 +98,28 @@ click($('[data-act="back"]')); click($('[data-open="s1"]')); await wait();
 click($('#signInTop')); await wait(20);
 go('/c/s2'); await wait(20);
 ok('el editor ve la pendiente por enlace', !!$('#songBody') && /Borrador/.test($('h1').textContent));
-// ---- posición principal de un acorde ----
+// ---- posición principal de un acorde: solo con el editor abierto ----
 const tile0 = () => $('#dgStrip .dg').innerHTML;
 const before = tile0();
 click($$('#songBody [data-ch]')[0]);
-ok('sin preferencia no ofrece "Quitar" y con la primera forma no ofrece "Usar"', !$('#pop [data-pop="pref"]') && !$('#pop [data-pop="unpref"]'));
+click($('#pop [data-pop="next"]'));
+ok('al leer no se ofrece fijar la forma principal', !$('#pop [data-pop="pref"]') && !$('#pop [data-pop="unpref"]') && !$('#pop [data-pop="edit"]'));
+click($('[data-act="edit"]'));
+click($$('#pv [data-ch]')[0]);
+ok('en el editor, con la primera forma no ofrece "Usar" ni "Quitar"', !$('#pop [data-pop="pref"]') && !$('#pop [data-pop="unpref"]'));
 click($('#pop [data-pop="next"]'));
 ok('en otra posición ofrece usarla como principal', !!$('#pop [data-pop="pref"]'));
 click($('#pop [data-pop="pref"]'));
-ok('la guarda en la canción', saved.length > 0 && saved[saved.length - 1].prefs && typeof saved[saved.length - 1].prefs.G === 'string');
+$('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true })); await wait(20);
+ok('al guardar queda en la canción', saved.length > 0 && saved[saved.length - 1].prefs && typeof saved[saved.length - 1].prefs.G === 'string');
 ok('el diagrama principal cambia', tile0() !== before);
 click($('[data-act="back"]')); click($('[data-open="s2"]')); await wait(20);
 ok('al reabrir la canción sigue como principal', tile0() !== before);
-click($$('#songBody [data-ch]')[0]);
+click($('[data-act="edit"]'));
+click($$('#pv [data-ch]')[0]);
 ok('y se puede quitar', !!$('#pop [data-pop="unpref"]'));
 click($('#pop [data-pop="unpref"]'));
+$('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true })); await wait(20);
 ok('quitarla devuelve la forma de siempre', tile0() === before && Object.keys(saved[saved.length - 1].prefs).length === 0);
 
 click($('[data-act="edit"]'));

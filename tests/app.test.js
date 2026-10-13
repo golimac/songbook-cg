@@ -109,13 +109,16 @@ ok('en transposición no se puede dibujar', $$('#dgStrip [data-edit]').length ==
 click($('[data-act="t0"]'));
 
 // ---- editor de diagramas: se guarda en la base ----
+ok('al leer no hay clic para editar diagramas, ni siquiera con sesión', $$('#dgStrip [data-edit]').length === 0);
 const writes0 = api.writes;
-click($$('#dgStrip [data-edit]').find((x) => /E7/.test(x.textContent)));
+click($('[data-act="edit"]'));
+click($$('#edDg [data-edit]').find((x) => /E7/.test(x.textContent)));
 ok('modal de diagrama abre', $('#dgModal').hidden === false);
 click($$('#dgBig .cell[data-i]').find((c) => c.dataset.i === '5' && c.dataset.r === '2'));
 $('#dgSave').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
 ok('modal cierra al guardar', $('#dgModal').hidden === true);
-ok('E7 quedó como propio', $$('#dgStrip .dg').some((x) => /E7/.test(x.textContent) && /propio/.test(x.textContent)));
+ok('E7 quedó como propio', $$('#edDg .dg').some((x) => /E7/.test(x.textContent) && /propio/.test(x.textContent)));
+$('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true })); await wait();
 ok('el diagrama propio se escribió en la base', api.writes === writes0 + 1 && !!api.bodies.get('ej2').diagrams.E7);
 
 // ---- exportar ----
@@ -157,9 +160,7 @@ ok('entrar al diagrama lo mantiene abierto', pop.hidden === false);
 const introCh = $$('#songBody .cl [data-ch]')[0];
 click(introCh);
 ok('tocar un acorde de la intro abre su diagrama', pop.hidden === false && pop.textContent.includes(introCh.textContent));
-click(pop.querySelector('[data-pop="edit"]'));
-ok('"Editar esta forma" abre el editor y cierra el emergente', pop.hidden === true && $('#dgModal').hidden === false);
-click($('#dgCancel'));
+ok('al leer, el emergente no ofrece editar ni fijar la forma principal', !pop.querySelector('[data-pop="edit"]') && !pop.querySelector('[data-pop="pref"]') && !pop.querySelector('[data-pop="unpref"]'));
 click($('[data-act="tp"]'));
 chEl('Ab').dispatchEvent(new w.MouseEvent('mouseover', { bubbles: true }));
 ok('transpuesto: diagrama de Ab sin botón de edición', /<h3>Ab<\/h3>/.test(pop.innerHTML) && !pop.querySelector('[data-pop="edit"]'));
@@ -168,7 +169,14 @@ click($('[data-act="t0"]'));
 click($('[data-act="back"]'));
 click($$('.item').find((i) => /Marea/.test(i.textContent))); await wait();
 click($$('#songBody [data-ch]').find((x) => x.textContent === 'Bb7/9'));
-ok('acorde sin forma lo dice y ofrece dibujar', /No hay una forma conocida/.test(pop.textContent) && !!pop.querySelector('[data-pop="edit"]'));
+ok('acorde sin forma lo dice', /No hay una forma conocida/.test(pop.textContent) && !pop.querySelector('[data-pop="edit"]'));
+click($('[data-act="edit"]'));
+click($$('#pv [data-ch]').find((x) => x.textContent === 'Bb7/9'));
+ok('en el editor ofrece dibujar la forma que falta', !!pop.querySelector('[data-pop="edit"]'));
+click(pop.querySelector('[data-pop="edit"]'));
+ok('"Dibujar" abre el editor de diagramas y cierra el emergente', pop.hidden === true && $('#dgModal').hidden === false);
+click($('#dgCancel'));
+click($('#edCancel'));
 const slash = $$('#songBody [data-ch]').find((x) => x.textContent === 'F/A');
 click(slash);
 ok('F/A tiene forma de biblioteca', !!pop.querySelector('svg'));
