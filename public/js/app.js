@@ -289,7 +289,18 @@ function refreshSong() {
   var body = $('#songBody');
   body.style.setProperty('--fs', S.fs + 'px');
   body.innerHTML = blocksHTML(ctx.blocks, ctx, 'view');
+  fitStrip();
 }
+/* El panel de acordes se queda fijo solo si cabe en la pantalla; si no, baja con la página (un único scroll). */
+function fitStrip() {
+  var strip = $('#dgStrip'); if (!strip || strip.hidden) return;
+  strip.classList.remove('fit');
+  var bar = $('#controls');
+  var top = (bar ? bar.offsetHeight : 0) + 52 + 8 + 16;
+  strip.style.top = top + 'px';
+  if (strip.offsetHeight && strip.offsetHeight <= window.innerHeight - top - 12) strip.classList.add('fit');
+}
+window.addEventListener('resize', function () { if (S.view === 'song') fitStrip(); });
 /* ---------- Autoscroll ---------- */
 var raf = null, lastTs = 0, acc = 0;
 function tick(ts) {

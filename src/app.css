@@ -140,12 +140,17 @@
   .cell { fill: transparent; cursor: pointer; }
   .cell:hover { fill: var(--accent); fill-opacity: .18; }
 
-  /* Canción: la letra a la izquierda y los diagramas en una columna fija a la derecha */
-  .songgrid { @apply grid gap-x-8; grid-template-columns: minmax(0, 1fr); }
+  /* Canción: la letra y, al lado, el panel de acordes. Todo baja con un solo scroll. */
+  .songgrid { @apply grid gap-x-10; grid-template-columns: minmax(0, 1fr); }
+  .songgrid > .dgs::before { content: 'Acordes'; @apply w-full font-display font-semibold text-lg text-ink mb-1; grid-column: 1 / -1; }
   @media (min-width: 960px) {
-    .songgrid { grid-template-columns: minmax(0, 1fr) 280px; align-items: start; }
-    .songgrid:has(#dgStrip[hidden]) { grid-template-columns: minmax(0, 1fr); }
-    .songgrid > .dgs { @apply sticky content-start overflow-auto my-2 pb-2; grid-column: 2; grid-row: 1; top: calc(var(--hh) + 96px); max-height: calc(100vh - var(--hh) - 112px); display: grid; grid-template-columns: repeat(3, 88px); gap: 8px; justify-content: start; }
+    .songgrid { grid-template-columns: minmax(0, 660px) 300px; align-items: start; justify-content: start; }
+    .songgrid:has(#dgStrip[hidden]) { grid-template-columns: minmax(0, 880px); }
+    .songgrid > .dgs { @apply content-start my-2 pl-8 border-l border-rule; display: grid; grid-template-columns: repeat(4, 64px); gap: 8px; justify-content: start; grid-column: 2; grid-row: 1; align-self: start; }
+    .songgrid > .dgs.fit { @apply sticky; }
+    .songgrid > .dgs .dg { @apply w-16 text-[11px] rounded-lg px-0; }
+    .songgrid > .dgs .dg svg { @apply w-[58px]; }
+    .songgrid > .dgs .dg b { @apply text-xs; }
     .songgrid > .song { grid-column: 1; grid-row: 1; }
   }
 
