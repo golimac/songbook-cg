@@ -1,0 +1,32 @@
+import { handleSong, buildTags, injectMeta, fromFirestore, esc } from '../api/_song.js';
+import fs from 'node:fs';
+let fail = 0;
+const ok = (n, c) => { console.log((c ? 'ok    ' : 'FALLA ') + n); if (!c) fail++; };
+const INDEX = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+const S = (o) => ({ fields: Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === 'number' ? { integerValue: String(v) } : { stringValue: v }])) });
+const mk = (doc, status = 200) => async (url) => {
+  if (url.endsWith('/index.html')) return { ok: true, text: async () => INDEX };
+  if (doc && status === 200) return { ok: true, json: async () => doc };
+  return { ok: false, status };
+};
+const req = (id) => ({ headers: { host: 'songbook.example' }, query: { id } });
+const rev = S({ title: 'Wish "You" <Were> Here', artist: 'Pink Floyd', album: 'Wish You Were Here', year: '1975', key: 'G', status: 'revisada', cover: 'https://is1.mzstatic.com/x/600x600bb.jpg', doubts: 0 });
+
+let o = await handleSong(req('s1'), mk(rev));
+ok('una canción revisada lleva título, artista y carátula', o.status === 200 && /property="og:title" content="Wish &quot;You&quot; &lt;Were&gt; Here — Pink Floyd"/.test(o.body) && /property="og:image" content="https:\/\/is1\.mzstatic\.com/.test(o.body));
+ok('describe con álbum, año y tonalidad', /Letra y acordes · Wish You Were Here \(1975\) · Tonalidad G/.test(o.body));
+ok('la dirección y el título de la pestaña', /og:url" content="https:\/\/songbook\.example\/c\/s1"/.test(o.body) && /<title>Wish &quot;You&quot; &lt;Were&gt; Here · Songbook CG<\/title>/.test(o.body));
+ok('conserva el resto de la aplicación', /id="view"/.test(o.body) && /<meta name="robots"/.test(o.body));
+o = await handleSong(req('s2'), mk(S({ title: 'Borrador', status: 'pendiente' })));
+ok('una pendiente cae en la vista genérica', !/Borrador/.test(o.body) && /og:title" content="Songbook CG"/.test(o.body));
+o = await handleSong(req('s3'), mk(null, 403));
+ok('si Firestore la niega, vista genérica y 200', o.status === 200 && /og:title" content="Songbook CG"/.test(o.body));
+o = await handleSong(req('../x'), mk(rev));
+ok('un id raro no consulta nada y sale genérico', /og:title" content="Songbook CG"/.test(o.body));
+o = await handleSong(req('s1'), mk(S({ title: 'T', status: 'revisada', cover: 'javascript:alert(1)' })));
+ok('una carátula que no es https no se publica', !/og:image/.test(o.body));
+ok('fromFirestore lee textos y enteros', fromFirestore(S({ a: 'x', n: 3 })).n === 3 && esc('<&>') === '&lt;&amp;&gt;');
+o = await handleSong(req('s1'), async () => { throw new Error('sin red'); });
+ok('sin poder cargar la app responde 502', o.status === 502);
+console.log(fail ? '\nFALLARON ' + fail : '\nsin errores');
+process.exitCode = fail ? 1 : 0;

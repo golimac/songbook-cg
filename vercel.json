@@ -8,7 +8,7 @@
   "rewrites": [
     {
       "source": "/c/:id",
-      "destination": "/index.html"
+      "destination": "/api/song?id=:id"
     }
   ]
 }
