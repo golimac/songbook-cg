@@ -149,6 +149,8 @@ eq('dudas: coincide con el contador', dl.length, C.countDoubts(C.parseBody(bd)))
 
 // ChordPro
 const cp = C.toChordPro({ title: 'Prueba', artist: 'X', key: 'Am', body: '{intro: Am - F}\n[Am]hola [F]mundo\n> G D' });
+const cp2 = C.toChordPro({ title: 'T', album: 'Disco', year: '1975', body: '' });
+eq('ChordPro lleva álbum y año', /\{album: Disco\}/.test(cp2) && /\{year: 1975\}/.test(cp2), true);
 console.log('--- ChordPro ---\n' + cp);
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
 process.exitCode = fail ? 1 : 0;

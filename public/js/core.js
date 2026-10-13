@@ -286,6 +286,8 @@ function toChordPro(song) {
   var out = [];
   out.push('{title: ' + song.title + '}');
   if (song.artist) out.push('{artist: ' + song.artist + '}');
+  if (song.album) out.push('{album: ' + song.album + '}');
+  if (song.year) out.push('{year: ' + song.year + '}');
   if (song.key) out.push('{key: ' + song.key + '}');
   if (song.tuning) out.push('{comment: ' + song.tuning + '}');
   if (song.source) out.push('{comment: Fuente: ' + song.source + '}');

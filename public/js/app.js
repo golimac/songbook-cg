@@ -255,14 +255,16 @@ function ago(ms) {
   var d = Math.round(h / 24); if (d < 31) return 'hace ' + d + (d === 1 ? ' día' : ' días');
   var mo = Math.round(d / 30); return mo < 12 ? 'hace ' + mo + (mo === 1 ? ' mes' : ' meses') : 'hace más de un año';
 }
-function avatar(name) {
+function safeCover(u) { return /^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : ''; }
+function avatar(name, cover) {
+  if (safeCover(cover)) return '<img class="av cv" src="' + esc(cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">';
   var h = 0, t = String(name || '?'); for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 360;
   var c = norm(t).replace(/[^a-z0-9]/g, '').charAt(0).toUpperCase() || '♪';
   return '<span class="av" style="--h:' + h + '" aria-hidden="true">' + c + '</span>';
 }
 var HOME_N = 7;
 function miniSong(s, meta) {
-  return '<button type="button" class="mini" data-open="' + esc(s.id) + '">' + avatar(s.artist || s.title) +
+  return '<button type="button" class="mini" data-open="' + esc(s.id) + '">' + avatar(s.artist || s.title, s.cover) +
     '<span class="mi-t"><b>' + esc(s.title) + '</b><i>' + esc(s.artist || 'Sin artista') + '</i></span>' +
     '<span class="mi-m">' + esc(meta || '') + '</span></button>';
 }
@@ -297,7 +299,7 @@ function homeHTML() {
     }).join('') + '</div>' +
     '<section class="box seenbox"><header><span class="bx-i" aria-hidden="true">' + IC.seen + '</span><h2>Visto recientemente</h2></header>' +
       (seen.length ? '<div class="vstrip">' + seen.map(function (s) {
-        return '<button class="vcard" data-open="' + esc(s.id) + '">' + avatar(s.artist || s.title) + '<span class="it-title">' + esc(s.title) + '</span>' +
+        return '<button class="vcard" data-open="' + esc(s.id) + '">' + avatar(s.artist || s.title, s.cover) + '<span class="it-title">' + esc(s.title) + '</span>' +
           '<span class="vc-sub">' + esc(s.artist || '') + '</span>' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') + '</button>';
       }).join('') + '</div>' : '<p class="bx-e">Aquí quedan las últimas canciones que abras en este dispositivo.</p>') + '</section>' +
     '<div class="boxes">' +
@@ -417,6 +419,7 @@ function openSong(id) {
     renderLibrary();
   });
 }
+function albumLine(s) { return s.album ? s.album + (s.year ? ' (' + s.year + ')' : '') : s.year || ''; }
 function showSong(song) {
   imp.cancel(); S.review = null; stopAuto(); hidePop();
   marcarVista(song.id);
@@ -425,7 +428,8 @@ function showSong(song) {
   var capoOpts = '<option value="0">Sin cejilla</option>';
   for (var i = 1; i <= 9; i++) capoOpts += '<option value="' + i + '">Traste ' + i + '</option>';
   view.innerHTML =
-    '<div class="shead"><div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, song.tuning].filter(Boolean).join(' · ')) + '</p></div>' +
+    '<div class="shead"><div class="sh-t">' + (safeCover(song.cover) ? '<img class="cover" src="' + esc(song.cover) + '" alt="Carátula de ' + esc(song.album || song.title) + '" referrerpolicy="no-referrer">' : '') +
+    '<div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, albumLine(song), song.tuning].filter(Boolean).join(' · ')) + '</p></div></div>' +
     '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="share">Copiar enlace</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
     '<div class="controls" id="controls">' +
       '<div class="grp"><span class="lab">Transponer</span><button class="btn sq" data-act="tm" aria-label="Bajar un semitono">−</button><output id="tval">0</output><button class="btn sq" data-act="tp" aria-label="Subir un semitono">+</button><button class="btn" data-act="t0">Original</button></div>' +
@@ -524,6 +528,11 @@ function openEditor(id, review) {
         '<label class="f">Tonalidad<input type="text" id="fKey" placeholder="Am, G, Bb"></label>' +
         '<label class="f">Estado<select id="fStatus">' + stOpts + '</select></label></div>' +
       '<label class="f">Afinación o cejilla de la fuente<textarea id="fTuning" rows="2" spellcheck="false"></textarea></label>' +
+      '<div class="albumbox"><div class="ab-c" id="abCover"></div><div class="ab-f">' +
+        '<div class="row3 ab-r"><label class="f">Álbum<input type="text" id="fAlbum"></label><label class="f">Año<input type="text" id="fYear" inputmode="numeric" maxlength="4"></label>' +
+        '<label class="f">Carátula (URL)<input type="text" id="fCover" placeholder="https://…"></label></div>' +
+        '<div class="actions"><button type="button" class="btn" id="alFind">Buscar álbum</button><button type="button" class="btn" id="alClear">Quitar álbum</button><span class="hint" id="alMsg" role="status"></span></div>' +
+        '<div class="alres" id="alRes" hidden></div></div></div>' +
       '<label class="f">Letra y acordes<textarea id="fBody" spellcheck="false"></textarea></label>' +
       '<details class="syntax"><summary>Cómo se escribe</summary><ul>' +
         '<li><code>[Am]</code> pone el acorde sobre la sílaba que sigue.</li>' +
@@ -542,7 +551,9 @@ function openEditor(id, review) {
     '</form>' +
     '<aside class="pv"><div class="pvh"><span>Vista previa</span><span id="pvN"></span></div><div class="dgs" id="edDg"></div><article class="song" id="pv"></article></aside></div>';
   $('#fTitle').value = d.title; $('#fArtist').value = d.artist; $('#fKey').value = d.key;
-  $('#fTuning').value = d.tuning; $('#fBody').value = d.body;
+  $('#fTuning').value = d.tuning || ''; $('#fBody').value = d.body || '';
+  $('#fAlbum').value = d.album || ''; $('#fYear').value = d.year || ''; $('#fCover').value = d.cover || '';
+  coverPrev();
   refreshPreview();
   if (review) {
     var im = $('#revImg img');
@@ -610,6 +621,29 @@ function readForm() {
   var d = S.draft;
   d.title = $('#fTitle').value; d.artist = $('#fArtist').value; d.key = $('#fKey').value.trim();
   d.tuning = $('#fTuning').value; d.status = $('#fStatus').value; d.body = $('#fBody').value;
+  d.album = $('#fAlbum').value.trim(); d.year = $('#fYear').value.replace(/\D/g, '').slice(0, 4); d.cover = $('#fCover').value.trim();
+}
+function coverPrev() {
+  var el = $('#abCover'); if (!el) return;
+  var u = safeCover($('#fCover').value.trim());
+  el.innerHTML = u ? '<img src="' + esc(u) + '" alt="Carátula" referrerpolicy="no-referrer">' : '<span aria-hidden="true">♪</span>';
+}
+function findAlbum() {
+  readForm();
+  var d = S.draft, res = $('#alRes'), msg = $('#alMsg');
+  if (!api.searchAlbum) { msg.textContent = 'La búsqueda no está disponible.'; return; }
+  if (!d.title.trim()) { msg.textContent = 'Escribe primero el título.'; return; }
+  msg.textContent = 'Buscando…'; res.hidden = true;
+  api.searchAlbum({ title: d.title, artist: d.artist }).then(function (list) {
+    if (S.view !== 'edit') return;
+    S.albumRes = list;
+    if (!list.length) { msg.textContent = 'No encontré nada. Prueba con otro título o escribe los datos a mano.'; return; }
+    msg.textContent = 'Elige el que corresponde.';
+    res.hidden = false;
+    res.innerHTML = list.map(function (r, i) {
+      return '<button type="button" class="alopt" data-al="' + i + '"><img src="' + esc(r.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer"><span><b>' + esc(r.album) + (r.year ? ' (' + esc(r.year) + ')' : '') + '</b><i>' + esc(r.song) + ' · ' + esc(r.artist) + '</i></span></button>';
+    }).join('');
+  }, function (e) { if (S.view === 'edit') msg.textContent = 'No se pudo buscar: ' + ((e && e.message) || 'error'); });
 }
 /* ---------- Editor de diagramas ---------- */
 var dgS = null, dgTarget = null;
@@ -757,6 +791,18 @@ view.addEventListener('click', function (e) {
     api.saveMany(clone(SAMPLES)).catch(failSave);
     return;
   }
+  var al = t.closest('[data-al]');
+  if (al && S.view === 'edit') {
+    var pick = (S.albumRes || [])[parseInt(al.getAttribute('data-al'), 10)];
+    if (pick) {
+      $('#fAlbum').value = pick.album; $('#fYear').value = pick.year; $('#fCover').value = pick.cover;
+      if (!$('#fArtist').value.trim()) $('#fArtist').value = pick.artist;
+      readForm(); coverPrev(); $('#alRes').hidden = true; $('#alMsg').textContent = 'Álbum aplicado.';
+    }
+    return;
+  }
+  if (t.id === 'alFind') { findAlbum(); return; }
+  if (t.id === 'alClear') { $('#fAlbum').value = ''; $('#fYear').value = ''; $('#fCover').value = ''; readForm(); coverPrev(); $('#alRes').hidden = true; $('#alMsg').textContent = ''; return; }
   var o = t.closest('[data-open]');
   if (o) { openSong(o.getAttribute('data-open')); return; }
   var lb = t.closest('[data-lib]');
@@ -792,7 +838,7 @@ view.addEventListener('click', function (e) {
 view.addEventListener('input', function (e) {
   var id = e.target.id;
   if (id === 'dur') { S.dur = parseInt(e.target.value, 10); $('#durv').textContent = fmtDur(S.dur); }
-  else if (S.view === 'edit' && /^f(Title|Artist|Key|Tuning|Status|Body)$/.test(id)) { readForm(); refreshPreview(); }
+  else if (S.view === 'edit' && /^f(Title|Artist|Key|Tuning|Status|Body|Album|Year|Cover)$/.test(id)) { readForm(); if (id === 'fCover') coverPrev(); refreshPreview(); }
 });
 view.addEventListener('change', function (e) {
   var id = e.target.id;

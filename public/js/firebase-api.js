@@ -1,7 +1,7 @@
 // Capa de datos sobre Firebase. app.js solo conoce la interfaz que devuelve createFirebaseApi().
 //
 // Modelo en Firestore:
-//   songs/{id}   datos livianos para la lista: title, artist, key, tuning, source, page, status, doubts, createdAt, updatedAt
+//   songs/{id}   datos livianos para la lista: title, artist, key, tuning, source, page, status, doubts, album, year, cover, createdAt, updatedAt
 //   bodies/{id}  cuerpo pesado, se lee al abrir la canción: body, diagrams
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import {
@@ -13,7 +13,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
-const META = ['title', 'artist', 'key', 'tuning', 'source', 'page', 'status', 'doubts'];
+const META = ['title', 'artist', 'key', 'tuning', 'source', 'page', 'status', 'doubts', 'album', 'year', 'cover'];
 
 export function createFirebaseApi() {
   const app = initializeApp(firebaseConfig);
@@ -88,6 +88,22 @@ export function createFirebaseApi() {
       try { j = await r.json(); } catch (e) { /* respuesta sin JSON */ }
       if (!r.ok) throw new Error((j && j.error) || 'La lectura falló (' + r.status + ').');
       return j;
+    },
+
+    // Busca álbum, año y carátula en el catálogo público de iTunes, a través de la función de Vercel.
+    async searchAlbum(payload) {
+      const u = auth.currentUser;
+      if (!u) throw new Error('Inicia sesión primero.');
+      const token = await u.getIdToken();
+      const r = await fetch('/api/album', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+      let j = null;
+      try { j = await r.json(); } catch (e) { /* respuesta sin JSON */ }
+      if (!r.ok) throw new Error((j && j.error) || 'La búsqueda falló (' + r.status + ').');
+      return j.results || [];
     },
 
     saveMany(songs) {
