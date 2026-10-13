@@ -78,9 +78,9 @@ function tokenizeLine(str) {
   return out;
 }
 
-/* Un acorde de letra puede traer una sucesión rápida entre paréntesis: [C (C4-C-G7-C)]. Devuelve sus fichas, o null si es un acorde común. */
+/* Un acorde de letra puede traer varios acordes seguidos: [C-F-C] o con una sucesión entre paréntesis: [C (C4-C-G7-C)]. Devuelve sus fichas, o null si es un acorde común. */
 function segTokens(str) {
-  if (str == null || str.indexOf('(') < 0 || parseChord(str)) return null;
+  if (str == null || !/[()\-\s·]/.test(str) || parseChord(str)) return null;
   var toks = tokenizeLine(str), has = false;
   walkTokens(toks, function (t) { if (t.type === 'chord') has = true; });
   return has ? toks : null;

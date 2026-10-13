@@ -155,6 +155,12 @@ eq('sucesión rápida: sin dudas', C.countDoubts(sq), 0);
 eq('sucesión rápida con un acorde ilegible cuenta una duda', C.countDoubts(C.parseBody('[C (Zz-C)]hola')), 1);
 eq('un acorde común no se toma por sucesión', C.segTokens('Am'), null);
 
+// Varios acordes seguidos sobre una sílaba: [C-F-C]
+const sq2 = C.parseBody('[C-F-C]hola [Am D]mundo');
+eq('[C-F-C]: acordes para diagramas', C.collectChords(sq2).map((x) => x.orig).join(), 'C,F,Am,D');
+eq('[C-F-C]: sin dudas', C.countDoubts(sq2), 0);
+eq('[Zz-Yy] sigue siendo una duda', C.countDoubts(C.parseBody('[Zz-Yy]hola')), 1);
+
 // Acordes del impreso con forma propia
 eq('C4 del cancionero: 0 3 3 0 1 0', C.shapesFor(C.parseChord('C4'))[0].frets.join(' '), '0 3 3 0 1 0');
 eq('G7/9: 3 0 0 2 0 1', C.shapesFor(C.parseChord('G7/9'))[0].frets.join(' '), '3 0 0 2 0 1');

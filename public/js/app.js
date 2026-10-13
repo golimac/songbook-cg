@@ -602,7 +602,7 @@ function openEditor(id, review) {
         '<div class="alres" id="alRes" hidden></div></div></div>' +
       '<label class="f">Letra y acordes<textarea id="fBody" spellcheck="false"></textarea></label>' +
       '<details class="syntax"><summary>Cómo se escribe</summary><ul>' +
-        '<li><code>[Am]</code> pone el acorde sobre la sílaba que sigue. Una sucesión rápida va entre paréntesis dentro de los corchetes: <code>[C (C4-C-G7-C)]</code>.</li>' +
+        '<li><code>[Am]</code> pone el acorde sobre la sílaba que sigue. Varios acordes sobre la misma sílaba van juntos: <code>[C-F-C]</code> o <code>[C (C4-C-G7-C)]</code>.</li>' +
         '<li><code>&gt; G D Em</code> escribe una línea solo de acordes.</li>' +
         '<li><code>{intro: G - D (50-60-62)}</code> escribe la introducción. Cada grupo entre paréntesis es cuerda y traste, y no se transpone.</li>' +
         '<li><code>{c: texto}</code> agrega una nota.</li>' +
