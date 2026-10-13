@@ -234,6 +234,17 @@ function shapesFor(c) {
       if (k < 2) continue;
       mov.push({ frets: [-1, k, k + 1, k - 1, k + 1, -1], base: k - 1 > 1 ? k - 1 : 1, barre: null });
     }
+    /* Raíz en la cuerda 6 y en la cuerda 4. La forma se repite cada tres trastes porque el disminuido es simétrico. */
+    [[4, [0, null, -1, 0, -1, null]], [2, [null, null, 0, 1, 0, 1]]].forEach(function (sh) {
+      for (var r = mod12(pc - sh[0]) % 3; r <= 14; r += 3) {
+        if (sh[1].some(function (o) { return o !== null && r + o < 1 && !(sh[0] === 2 && r + o === 0); })) continue;
+        var fr = sh[1].map(function (o) { return o === null ? -1 : r + o; });
+        var pl = fr.filter(function (f) { return f > 0; });
+        if (Math.max.apply(null, fr) > 15) continue;
+        var mn = Math.min.apply(null, pl);
+        mov.push({ frets: fr, base: mn > 1 ? mn : 1, barre: null });
+      }
+    });
   } else if (q === 'm7b5') {
     /* Semidisminuido: raíz en la cuerda 6, 5 o 4. null = cuerda muda; el resto es traste relativo a la raíz. */
     [[4, [0, null, 0, 0, -1, null]], [9, [null, 0, 1, 0, 1, null]], [2, [null, null, 0, 1, 1, 1]]].forEach(function (sh) {
