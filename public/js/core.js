@@ -221,6 +221,40 @@ var SLASH = {
   'A/C#': ['x42220'], 'A/E': ['002220'], 'Em/G': ['320000']
 };
 /* Formas del impreso con nombre propio (cuerdas 6 a 1). Van primero; C4 del cancionero no es C sus4: lleva el mi grave y el mi agudo al aire. */
+/* Catálogo por familias (escueladeguitarristas): formas en cuerdas 6 a 1, "x" = muda. Cuando un acorde está aquí, estas formas
+   son las únicas del catálogo para él, en este orden. Se agrega una raíz a la vez. */
+var CAT = {
+  C: ['x 3 2 0 1 0', 'x 3 5 5 5 3', '8 7 5 5 5 x', '8 10 10 9 8 8', 'x x 10 12 13 12'],
+  Cm: ['x 3 1 0 1 x', 'x 3 5 5 4 3', 'x x 5 8 8 8', '8 10 10 8 8 8', '11 x 10 12 13 x'],
+  Caug: ['x 3 2 1 1 0', 'x x 6 5 5 4', '8 7 6 5 5 x', 'x x 10 9 9 8'],
+  Cdim: ['x 3 4 5 4 x', '8 9 10 8 x x'],
+  Csus4: ['x 3 3 0 1 x', 'x 3 5 5 6 3', 'x x 5 5 6 8', '8 10 10 10 8 8', 'x x 10 12 13 13'],
+  Csus2: ['x 3 5 5 3 3', 'x x 10 12 13 10'],
+  Cmaj7: ['x 3 5 4 5 x', '8 x 9 9 8 x', 'x x 10 12 12 12', 'x 3 2 0 0 0'],
+  C7: ['x 3 5 3 5 3', '8 x 8 9 8 x', 'x x 10 12 11 12'],
+  Cm7: ['x 3 5 3 4 3', '8 x 8 8 8 x', 'x x 10 12 11 11'],
+  Cm7b5: ['x 3 4 3 4 x', '8 x 8 8 7 x', 'x x 10 11 11 11'],
+  Cdim7: ['x 3 4 2 4 x', '8 x 7 8 7 x', 'x x 10 11 10 11'],
+  C7sus4: ['x 3 5 3 6 3', '8 x 8 10 8 x', 'x x 10 12 11 13']
+};
+function catQual(q) {
+  q = qualKey(q);
+  return { '+': 'aug', '°': 'dim', '°7': 'dim7', sus: 'sus4', '7sus': '7sus4', sus7: '7sus4', 'Δ': 'maj7' }[q] || q;
+}
+/* Diagrama a partir de seis trastes: la base y la cejilla se deducen */
+function fromFrets(str) {
+  var f = str.split(/\s+/).map(function (x) { return x === 'x' ? -1 : parseInt(x, 10); });
+  var pos = f.filter(function (x) { return x > 0; });
+  var mn = Math.min.apply(null, pos), mx = Math.max.apply(null, pos);
+  var base = mx <= 5 ? 1 : mn, barre = null;
+  var at = []; f.forEach(function (x, i) { if (x === mn) at.push(i); });
+  if (at.length >= 2 && at[at.length - 1] - at[0] >= 2) {
+    var ok = true;
+    for (var i = at[0]; i <= at[at.length - 1]; i++) if (f[i] < mn) ok = false;
+    if (ok) barre = { fret: mn, from: at[0], to: at[at.length - 1] };
+  }
+  return { frets: f, base: base, barre: barre };
+}
 /* Formas guardadas por el editor en la biblioteca de acordes: { 'Am7': [{frets, base, barre}] }. Van antes que las del catálogo. */
 var USER = {};
 function setUserShapes(m) { USER = m || {}; }
@@ -250,6 +284,9 @@ function shapesFor(c) {
     if (sl) sl.forEach(function (x) { add(fromCode(x)); });
     return out;
   }
+  var cq = catQual(c.qual), cat = null;
+  [c.root + c.acc + cq, SHARP[pc] + cq, FLAT[pc] + cq].forEach(function (n) { if (!cat && CAT[n]) cat = CAT[n]; });
+  if (cat) { cat.forEach(function (x) { add(fromFrets(x)); }); return out; }
   var done = {};
   [c.root + c.acc + q, SHARP[pc] + q, FLAT[pc] + q].forEach(function (n) {
     if (done[n]) return;

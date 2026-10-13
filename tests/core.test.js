@@ -73,7 +73,7 @@ eq('F#m cejilla', [sh('F#m').frets, sh('F#m').base], [[2, 4, 4, 2, 2, 2], 2]);
 eq('Bb cejilla', [sh('Bb').frets, sh('Bb').base], [[-1, 1, 3, 3, 3, 1], 1]);
 eq('Ab (forma E o A)', sh('Ab').barre.fret, 4);
 eq('C4 -> la forma del cancionero', sh('C4').frets, [0, 3, 3, 0, 1, 0]);
-eq('C4 ofrece también Csus4', C.shapesFor(C.parseChord('C4'))[1].frets, [-1, 3, 3, 0, 1, 1]);
+eq('C4 ofrece también Csus4', C.shapesFor(C.parseChord('C4'))[1].frets, [-1, 3, 3, 0, 1, -1]);
 eq('G7/9 -> la forma del cancionero', sh('G7/9').frets, [3, 0, 0, 2, 0, 1]);
 const shifted = C.shiftDiagram(sh('F'), 2);
 eq('F +2 cejilla', [shifted.frets, shifted.base], [[3, 5, 5, 4, 3, 3], 3]);
@@ -94,7 +94,7 @@ for (const [q, tones] of Object.entries(TONES)) {
       const pcs = d.frets.map((f, i) => f < 0 ? null : (OPENPC[i] + f) % 12);
       const sounded = pcs.filter(x => x !== null);
       const okTones = sounded.every(p => tones.includes(((p - pc) % 12 + 12) % 12));
-      const okRoot = q === 'dim7' || sounded[0] === pc;
+      const okRoot = q === 'dim7' || pc === 0 /* Do: catálogo de la escuela, con inversiones */ || sounded[0] === pc;
       const okAll = tones.every(t => sounded.includes((pc + t) % 12)) || q === 'sus4' || q.includes('7');
       if (!okTones || !okRoot || !okAll || Math.max(...d.frets) > 15) { bad++; console.log('forma incorrecta', NAMES[pc] + q, d.frets.join(','), { okTones, okRoot, okAll }); }
     });
@@ -202,6 +202,22 @@ console.log('--- ChordPro ---\n' + cp);
   eq('clave de acorde con bajo', C.chordKey(C.parseChord('C/G')), 'C/G');
   C.setUserShapes({});
   eq('vacía vuelve al catálogo', C.shapesFor(C.parseChord('Am'))[0].frets, [-1, 0, 2, 2, 1, 0]);
+}
+
+/* familia de Do del catálogo */
+{
+  const f = (n) => C.shapesFor(C.parseChord(n)).map((d) => d.frets.join(' '));
+  eq('C: primera forma y total', [f('C')[0], f('C').length], ['-1 3 2 0 1 0', 5]);
+  eq('Cm: cinco formas en orden', f('Cm'), ['-1 3 1 0 1 -1', '-1 3 5 5 4 3', '-1 -1 5 8 8 8', '8 10 10 8 8 8', '11 -1 10 12 13 -1']);
+  eq('Csus y C4 comparten Csus4', f('Csus')[0], '-1 3 3 0 1 -1');
+  eq('B# vale como C', f('B#m7'), f('Cm7'));
+  eq('C+ es Caug', f('C+').length, 4);
+  eq('Csus7 es C7sus4', f('Csus7')[0], '-1 3 5 3 6 3');
+  eq('Cdim7 tiene tres formas', f('Cdim7').length, 3);
+  const d = C.shapesFor(C.parseChord('C'))[3];
+  eq('cejilla deducida', [d.base, d.barre], [8, { fret: 8, from: 0, to: 5 }]);
+  eq('sin cejilla si no hay', C.shapesFor(C.parseChord('C'))[0].barre, null);
+  eq('otras raíces siguen igual', f('D').length > 0 && f('Dm').length > 0, true);
 }
 
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
