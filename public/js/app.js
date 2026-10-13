@@ -174,7 +174,34 @@ function vistas() { try { return JSON.parse(window.localStorage.getItem(RV_KEY) 
 function marcarVista(id) {
   try { window.localStorage.setItem(RV_KEY, JSON.stringify([id].concat(vistas().filter(function (x) { return x !== id; })).slice(0, 24))); } catch (e) { /* sin almacenamiento */ }
 }
+/* Direcciones: /c/<id> abre una canción; / es la biblioteca. */
+var curUrl = window.location.pathname;
+function setUrl(p) { if (p === curUrl) return; try { window.history.pushState(null, '', p); } catch (e) { /* sin historial */ } curUrl = p; }
+function pathId() { var m = /^\/c\/([^\/]+)\/?$/.exec(window.location.pathname); return m ? decodeURIComponent(m[1]) : ''; }
+S.pendingId = pathId();
+function routeSong(id) {
+  if (!listLoaded) { S.pendingId = id; return; }
+  if (songs.some(function (s) { return s.id === id; })) { openSong(id); return; }
+  imp.cancel(); stopAuto(); hidePop(); S.review = null; S.view = 'library'; S.song = null;
+  document.title = 'Songbook CG';
+  view.innerHTML = '<div class="login"><h1>Canción no disponible</h1><p class="hint">Este enlace no corresponde a ninguna canción que puedas ver.</p>' +
+    '<button class="btn primary" type="button" data-lib="home">Ir a la biblioteca</button></div>';
+}
+function copyLink() {
+  var url = window.location.origin + '/c/' + encodeURIComponent(S.id);
+  var msg = 'Enlace copiado.' + (editable() && S.song && S.song.status !== 'revisada' ? ' Los invitados solo la verán cuando esté revisada.' : '');
+  function fallback() {
+    var ta = document.createElement('textarea'); ta.value = url; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    var okc = false; try { okc = document.execCommand('copy'); } catch (e) { /* sin copiar */ }
+    document.body.removeChild(ta);
+    toast(okc ? msg : 'Copia este enlace: ' + url, !okc);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { toast(msg); }, fallback); else fallback();
+}
 function renderLibrary() {
+  if (!S.pendingId) setUrl('/');
+  document.title = 'Songbook CG';
   imp.cancel(); stopAuto(); hidePop();
   S.review = null;
   S.view = 'library'; S.song = null;
@@ -369,6 +396,7 @@ function applyAuth(u) {
   unsub = api.subscribeSongs(function (list) {
     songs = user ? list : list.filter(function (s) { return s.status === 'revisada'; }); listLoaded = true;
     fillList();
+    if (S.pendingId) { var pid = S.pendingId; S.pendingId = ''; routeSong(pid); }
   }, function (e) {
     denied = true; songs = []; listLoaded = true;
     if (e && e.code === 'permission-denied') { if (user) renderDenied(); else renderLogin(); }
@@ -392,12 +420,13 @@ function openSong(id) {
 function showSong(song) {
   imp.cancel(); S.review = null; stopAuto(); hidePop();
   marcarVista(song.id);
+  setUrl('/c/' + encodeURIComponent(song.id)); document.title = song.title + ' · Songbook CG';
   S.view = 'song'; S.id = song.id; S.song = song; S.shift = 0; S.capo = 0; S.pos = {};
   var capoOpts = '<option value="0">Sin cejilla</option>';
   for (var i = 1; i <= 9; i++) capoOpts += '<option value="' + i + '">Traste ' + i + '</option>';
   view.innerHTML =
     '<div class="shead"><div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, song.tuning].filter(Boolean).join(' · ')) + '</p></div>' +
-    '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
+    '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="share">Copiar enlace</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
     '<div class="controls" id="controls">' +
       '<div class="grp"><span class="lab">Transponer</span><button class="btn sq" data-act="tm" aria-label="Bajar un semitono">−</button><output id="tval">0</output><button class="btn sq" data-act="tp" aria-label="Subir un semitono">+</button><button class="btn" data-act="t0">Original</button></div>' +
       '<div class="grp"><label class="lab" for="capo">Cejilla</label><select id="capo">' + capoOpts + '</select></div>' +
@@ -695,6 +724,16 @@ $('#theme').addEventListener('click', function () {
 
 /* ---------- Eventos ---------- */
 $('#goHome').addEventListener('click', function () { if (denied) return; LIB.page = 'home'; LIB.artist = ''; S.q = ''; $('#q').value = ''; renderLibrary(); });
+window.addEventListener('popstate', function () {
+  if (denied || S.view === 'login') { curUrl = window.location.pathname; return; }
+  if (S.view === 'edit' || imp.isActive()) {
+    try { window.history.pushState(null, '', curUrl); } catch (e) { /* sin historial */ }
+    toast('Guarda o cancela antes de salir.', true); return;
+  }
+  curUrl = window.location.pathname;
+  var id = pathId();
+  if (id) routeSong(id); else renderLibrary();
+});
 /* Buscador de la barra superior: funciona en toda la app, menos al editar o importar */
 function searchBlocked() { return S.view === 'edit' || imp.isActive(); }
 $('#q').addEventListener('focus', function (e) { if (searchBlocked()) { e.target.blur(); toast('Guarda o cancela antes de buscar.', true); } });
@@ -742,6 +781,7 @@ view.addEventListener('click', function (e) {
   if (act === 'back') renderLibrary();
   else if (act === 'edit') openEditor(S.id);
   else if (act === 'export') openExport(S.song);
+  else if (act === 'share') copyLink();
   else if (act === 'tp') { S.shift = Math.min(11, S.shift + 1); refreshSong(); }
   else if (act === 'tm') { S.shift = Math.max(-11, S.shift - 1); refreshSong(); }
   else if (act === 't0') { S.shift = 0; S.capo = 0; refreshSong(); }

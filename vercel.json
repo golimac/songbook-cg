@@ -2,6 +2,14 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "functions": {
-    "api/read.js": { "maxDuration": 60 }
-  }
+    "api/read.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/c/:id",
+      "destination": "/index.html"
+    }
+  ]
 }
