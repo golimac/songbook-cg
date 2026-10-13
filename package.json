@@ -3,9 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/core.test.js && node tests/api.test.js && node tests/app.test.js && node tests/denied.test.js && node tests/photo.test.js && node tests/import.test.js"
+    "test": "node tests/core.test.js && node tests/api.test.js && node tests/app.test.js && node tests/denied.test.js && node tests/photo.test.js && node tests/import.test.js",
+    "build:css": "tailwindcss -i src/app.css -o public/css/app.css --minify",
+    "watch:css": "tailwindcss -i src/app.css -o public/css/app.css --watch"
   },
   "devDependencies": {
-    "jsdom": "^25.0.1"
+    "@tailwindcss/cli": "^4.3.3",
+    "jsdom": "^25.0.1",
+    "tailwindcss": "^4.3.3"
   }
 }

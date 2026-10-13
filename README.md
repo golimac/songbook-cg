@@ -43,3 +43,7 @@ api/read.js, api/_lib.js   función de Vercel que lee fotos con el modelo de vis
 firestore.rules            reglas de seguridad
 tests/                     pruebas
 ```
+
+## Estilos
+
+La interfaz usa Tailwind 4. El código fuente de los estilos está en `src/app.css` y el resultado compilado en `public/css/app.css` (se sube al repositorio, Vercel no compila nada). Después de cambiar estilos o clases en `public/js`, ejecuta `npm run build:css`.
