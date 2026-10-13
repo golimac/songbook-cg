@@ -19,7 +19,7 @@ const go = (path) => { w.history.pushState(null, '', path); w.dispatchEvent(new 
 
 let authCb;
 const list = [
-  { id: 's1', title: 'Camino', artist: 'A', key: 'G', status: 'revisada', doubts: 0 },
+  { id: 's1', title: 'Camino', artist: 'A', tuning: 'Afinación del campo', key: 'G', status: 'revisada', doubts: 0 },
   { id: 's2', title: 'Borrador', artist: 'A', key: 'G', status: 'pendiente', doubts: 0 },
   { id: 's3', title: 'Otra', artist: 'B', key: 'Am', status: 'revisada', doubts: 0 }
 ];
@@ -27,12 +27,13 @@ const api = {
   onAuth(cb) { authCb = cb; cb(null); return () => {}; },
   async signIn() { authCb({ uid: 'u', email: 'yo@example.test' }); }, async signOut() { authCb(null); },
   subscribeSongs(ok2) { setTimeout(() => ok2(list.map((s) => ({ ...s }))), 0); return () => {}; },
-  async getBody() { return { body: '[G]Hola', diagrams: {} }; },
+  async getBody() { return { body: '{c: Afinar un tono más bajo}\n[G]Hola', diagrams: {} }; },
   saveSong() { return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
 };
 start(api); await wait(30);
 
 ok('al cargar /c/s1 abre esa canción', !!$('#songBody') && /Camino/.test($('h1').textContent) && w.location.pathname === '/c/s1');
+ok('la nota del inicio va bajo la tonalidad, en cursiva, y no se repite ni sale en el encabezado', /Nota: Afinar un tono más bajo/.test($('#info').textContent) && $('#info i').textContent === 'Afinar un tono más bajo' && !$('#songBody .note') && !/Afinaci|Afinar/.test($('.meta').textContent));
 ok('el título de la pestaña lleva la canción', /Camino · Songbook CG/.test(d.title));
 click($('[data-act="back"]'));
 ok('volver a la biblioteca cambia la dirección a /', w.location.pathname === '/' && !!$('.hero') && d.title === 'Songbook CG');

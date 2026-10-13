@@ -429,7 +429,7 @@ function showSong(song) {
   for (var i = 1; i <= 9; i++) capoOpts += '<option value="' + i + '">Traste ' + i + '</option>';
   view.innerHTML =
     '<div class="shead"><div class="sh-t">' + (safeCover(song.cover) ? '<img class="cover" src="' + esc(song.cover) + '" alt="Carátula de ' + esc(song.album || song.title) + '" referrerpolicy="no-referrer">' : '') +
-    '<div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, albumLine(song), song.tuning].filter(Boolean).join(' · ')) + '</p></div></div>' +
+    '<div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, albumLine(song)].filter(Boolean).join(' · ')) + '</p></div></div>' +
     '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="share">Copiar enlace</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
     '<div class="controls" id="controls">' +
       '<div class="grp"><span class="lab">Transponer</span><button class="btn sq" data-act="tm" aria-label="Bajar un semitono">−</button><output id="tval">0</output><button class="btn sq" data-act="tp" aria-label="Subir un semitono">+</button><button class="btn" data-act="t0">Original</button></div>' +
@@ -457,6 +457,11 @@ function refreshSong() {
       (S.capo ? ' · cejilla en el traste ' + S.capo + ', formas en <b>' + esc(keyName(ctx.key, ctx.ss)) + '</b>' : '') +
       (ctx.inferred ? ' · tonalidad tomada del primer acorde' : '') + '</p>';
   } else info += '<p class="info">La canción no tiene tonalidad definida.</p>';
+  /* La nota de afinación o cejilla va bajo la tonalidad: la del inicio de la letra o, si no hay, el campo de afinación. */
+  var notes = [];
+  while (ctx.blocks.length && ctx.blocks[0].type === 'note') notes.push(ctx.blocks.shift().text);
+  if (!notes.length && String(song.tuning || '').trim()) notes.push(String(song.tuning).trim());
+  if (notes.length) info += '<p class="info">Nota: <i>' + esc(notes.join(' · ').replace(/\s+/g, ' ')) + '</i></p>';
   var n = countDoubts(ctx.blocks);
   if (n) info += '<div class="banner warn">' + n + (n === 1 ? ' marca por revisar, resaltada' : ' marcas por revisar, resaltadas') + ' en ámbar. Se corrigen en el editor.</div>';
   if (ctx.ss !== 0 && hasUntransposable(ctx.blocks)) info += '<div class="banner">Las figuras cuerda-traste y las tablaturas conservan su posición original.</div>';
