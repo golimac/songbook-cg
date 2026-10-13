@@ -17,7 +17,7 @@ const ok = (n, c) => { console.log((c ? 'ok    ' : 'FALLA ') + n); if (!c) fails
 const click = (el) => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
 const go = (path) => { w.history.pushState(null, '', path); w.dispatchEvent(new w.PopStateEvent('popstate')); };
 
-let authCb;
+let authCb; const saved = [];
 const list = [
   { id: 's1', title: 'Camino', artist: 'A', tuning: 'Afinación del campo', key: 'G', status: 'revisada', doubts: 0 },
   { id: 's2', title: 'Borrador', artist: 'A', key: 'G', status: 'pendiente', doubts: 0 },
@@ -30,8 +30,8 @@ const api = {
   onAuth(cb) { authCb = cb; cb(null); return () => {}; },
   async signIn() { authCb({ uid: 'u', email: 'yo@example.test' }); }, async signOut() { authCb(null); },
   subscribeSongs(ok2) { setTimeout(() => ok2(list.map((s) => ({ ...s }))), 0); return () => {}; },
-  async getBody(id) { return { body: (id === 's3' ? '[C (C4-C-G7-C)]Hola [C-F-C]mundo [Zz]raro\n' : '{c: Afinar un tono más bajo}\n') + '[G]Hola', diagrams: {} }; },
-  saveSong() { return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
+  async getBody(id) { const sv = saved.filter((x) => x.id === id).pop(); return { prefs: sv ? sv.prefs : {}, body: (id === 's3' ? '[C (C4-C-G7-C)]Hola [C-F-C]mundo [Zz]raro\n' : '{c: Afinar un tono más bajo}\n') + '[G]Hola', diagrams: {} }; },
+  saveSong(s) { saved.push(JSON.parse(JSON.stringify(s))); return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
 };
 start(api); await wait(30);
 
@@ -98,6 +98,23 @@ click($('[data-act="back"]')); click($('[data-open="s1"]')); await wait();
 click($('#signInTop')); await wait(20);
 go('/c/s2'); await wait(20);
 ok('el editor ve la pendiente por enlace', !!$('#songBody') && /Borrador/.test($('h1').textContent));
+// ---- posición principal de un acorde ----
+const tile0 = () => $('#dgStrip .dg').innerHTML;
+const before = tile0();
+click($$('#songBody [data-ch]')[0]);
+ok('sin preferencia no ofrece "Quitar" y con la primera forma no ofrece "Usar"', !$('#pop [data-pop="pref"]') && !$('#pop [data-pop="unpref"]'));
+click($('#pop [data-pop="next"]'));
+ok('en otra posición ofrece usarla como principal', !!$('#pop [data-pop="pref"]'));
+click($('#pop [data-pop="pref"]'));
+ok('la guarda en la canción', saved.length > 0 && saved[saved.length - 1].prefs && typeof saved[saved.length - 1].prefs.G === 'string');
+ok('el diagrama principal cambia', tile0() !== before);
+click($('[data-act="back"]')); click($('[data-open="s2"]')); await wait(20);
+ok('al reabrir la canción sigue como principal', tile0() !== before);
+click($$('#songBody [data-ch]')[0]);
+ok('y se puede quitar', !!$('#pop [data-pop="unpref"]'));
+click($('#pop [data-pop="unpref"]'));
+ok('quitarla devuelve la forma de siempre', tile0() === before && Object.keys(saved[saved.length - 1].prefs).length === 0);
+
 click($('[data-act="edit"]'));
 go('/'); await wait();
 ok('al editar el botón Atrás no sale y avisa', !!$('#fBody') && w.location.pathname === '/c/s2' && $$('.toast.err').length > 0);

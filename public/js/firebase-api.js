@@ -2,7 +2,7 @@
 //
 // Modelo en Firestore:
 //   songs/{id}   datos livianos para la lista: title, artist, key, tuning, source, page, status, doubts, album, year, cover, createdAt, updatedAt
-//   bodies/{id}  cuerpo pesado, se lee al abrir la canción: body, diagrams
+//   bodies/{id}  cuerpo pesado, se lee al abrir la canción: body, diagrams, prefs (posición principal por acorde)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut
@@ -63,7 +63,7 @@ export function createFirebaseApi() {
       if (isNew) meta.createdAt = serverTimestamp();
       const b = writeBatch(db);
       b.set(doc(db, 'songs', song.id), meta, { merge: true });
-      b.set(doc(db, 'bodies', song.id), { body: song.body || '', diagrams: song.diagrams || {} });
+      b.set(doc(db, 'bodies', song.id), { body: song.body || '', diagrams: song.diagrams || {}, prefs: song.prefs || {} });
       return b.commit();
     },
 
@@ -114,7 +114,7 @@ export function createFirebaseApi() {
         meta.updatedAt = serverTimestamp();
         meta.createdAt = serverTimestamp();
         b.set(doc(db, 'songs', song.id), meta);
-        b.set(doc(db, 'bodies', song.id), { body: song.body || '', diagrams: song.diagrams || {} });
+        b.set(doc(db, 'bodies', song.id), { body: song.body || '', diagrams: song.diagrams || {}, prefs: song.prefs || {} });
       });
       return b.commit();
     }

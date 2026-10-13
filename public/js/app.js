@@ -148,7 +148,14 @@ function positionsFor(song, ctx, orig) {
   shapesFor(parseChord(disp)).forEach(function (d) {
     if (!list.some(function (x) { return x.d.frets.join() === d.frets.join(); })) list.push({ d: d, custom: false });
   });
-  return { disp: disp, list: list };
+  /* La posición que el editor fijó como principal en esta canción va primero (solo en la tonalidad original). */
+  var pref = ctx.ss === 0 && song.prefs && song.prefs[orig];
+  if (pref) {
+    var at = -1;
+    list.forEach(function (x, i) { if (at < 0 && x.d.frets.join(',') === pref) at = i; });
+    if (at > 0) list.unshift(list.splice(at, 1)[0]);
+  }
+  return { disp: disp, list: list, pref: !!pref };
 }
 function posIndex(P) {
   var n = P.list.length;
@@ -431,7 +438,7 @@ function openSong(id) {
   view.innerHTML = '<p class="hint">Abriendo canción…</p>';
   api.getBody(id).then(function (b) {
     if (S.view === 'song' && S.id !== id) return;
-    showSong(Object.assign({ diagrams: {} }, meta, { body: b.body || '', diagrams: b.diagrams || {} }));
+    showSong(Object.assign({ diagrams: {}, prefs: {} }, meta, { body: b.body || '', diagrams: b.diagrams || {}, prefs: b.prefs || {} }));
   }, function (e) {
     toast('No se pudo abrir la canción: ' + ((e && e.message) || 'sin conexión y sin copia local'), true);
     renderLibrary();
@@ -787,6 +794,10 @@ function renderPop() {
       '<span>' + (i + 1) + ' de ' + n + (P.list[i].custom ? ' · propio' : '') + '</span>' +
       '<button class="btn sq" type="button" data-pop="next" aria-label="Posición siguiente">›</button></div>';
   } else h += '<div class="blank">?</div><p class="hint">No hay una forma conocida para este acorde.</p>';
+  if (pc.ctx.ss === 0 && editable() && n > 1) {
+    if (i > 0) h += '<button class="btn" type="button" data-pop="pref">Usar como principal</button>';
+    else if (P.pref) h += '<button class="btn" type="button" data-pop="unpref">Quitar como principal</button>';
+  }
   if (pc.ctx.ss === 0 && editable()) h += '<button class="btn" type="button" data-pop="edit">' + (n ? 'Editar esta forma' : 'Dibujar') + '</button>';
   pop.innerHTML = h;
 }
@@ -977,6 +988,13 @@ pop.addEventListener('click', function (e) {
   if (act === 'prev' || act === 'next') {
     S.pos[P.disp] = posIndex(P) + (act === 'next' ? 1 : -1);
     renderPop(); refreshStrip();
+  } else if ((act === 'pref' || act === 'unpref') && editable() && pc.ctx.ss === 0) {
+    var cur = P.list[posIndex(P)];
+    pc.song.prefs = pc.song.prefs || {};
+    if (act === 'pref' && cur) pc.song.prefs[popFor.orig] = cur.d.frets.join(',');
+    else delete pc.song.prefs[popFor.orig];
+    S.pos[P.disp] = 0;
+    afterDg();
   } else if (act === 'edit') {
     var o = popFor.orig, d = P.list.length ? clone(P.list[posIndex(P)].d) : null;
     hidePop(); openDg(o, d);
