@@ -1,6 +1,6 @@
 import {
   parseChord, chordToString, transposeChord, parseKey, flatsFor, keyName, parseBody, collectChords,
-  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove, setUserShapes, chordKey
+  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove, setUserShapes, chordKey, fillTab
 } from './core.js';
 import { imaging as realImaging } from './photo.js';
 import { createImporter } from './import.js';
@@ -94,12 +94,18 @@ function lyricHTML(b, ctx) {
     return '<span class="seg">' + c + '<span class="t">' + esc(s.text) + '</span></span>';
   }).join('') + '</div>';
 }
+function fillHTML(b) {
+  function nt(n) { return '<span class="fn' + (n.bad || n.doubt ? dbt(true) : '') + '">' + esc(n.text) + '</span>'; }
+  var seq = b.steps.map(function (st) { return st.group ? '<span class="fg">(' + st.notes.map(nt).join(' ') + ')</span>' : nt(st.notes[0]); }).join(' ');
+  return '<div class="fill"><span class="lab">' + esc(b.label) + '</span><span class="fseq">' + seq + '</span><pre class="tab">' + esc(fillTab(b.steps)) + '</pre></div>';
+}
 function blocksHTML(blocks, ctx, mode) {
   return blocks.map(function (b) {
     switch (b.type) {
       case 'gap': return '<div class="gap"></div>';
       case 'note': return '<div class="note">' + esc(b.text) + '</div>';
       case 'alt': return mode === 'edit' ? '<div class="alt">alternativa · ' + esc(b.text) + '</div>' : '';
+      case 'fill': return fillHTML(b);
       case 'tab': return '<pre class="tab">' + esc(b.lines.join('\n')) + '</pre>';
       case 'chords': return '<div class="cl">' + (b.label ? '<span class="lab sp">' + esc(b.label) + '</span>' : '') + tokHTML(b.tokens, ctx) + '</div>';
       case 'lyric': return lyricHTML(b, ctx);
@@ -669,6 +675,7 @@ function openEditor(id, review) {
         '<li>Si pegas la letra con los acordes en una línea encima, alineados con las sílabas, el botón <b>Convertir acordes sobre la letra</b> los pasa a <code>[Am]</code>. Acepta solfeo.</li>' +
         '<li><code>{intro: G - D (50-60-62)}</code> escribe la introducción. Cada grupo entre paréntesis es cuerda y traste, y no se transpone.</li>' +
         '<li><code>{c: texto}</code> agrega una nota.</li>' +
+        '<li><code>{fill: 30,32,(63,20),21}</code> escribe un fill en su propia línea, debajo del verso. Cada nota es cuerda y traste: <code>30</code> es la 3ª al aire y <code>110</code> la 1ª en el traste 10. Lo que va entre paréntesis suena a la vez. La tablatura se dibuja sola. Con nombre: <code>{fill Puente: 30,32}</code>.</li>' +
         '<li><code>{sot}</code> y <code>{eot}</code> encierran una tablatura.</li>' +
         '<li><code>{alt: texto}</code> guarda una línea alternativa que solo se ve aquí.</li>' +
         '<li><code>A*</code> marca una variante de posición con su propio diagrama.</li>' +

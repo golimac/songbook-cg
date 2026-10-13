@@ -96,6 +96,38 @@ function parseLyricLine(line) {
   return segs;
 }
 
+/* Fill: notas como cuerda+traste (30 = cuerda 3 al aire, 110 = cuerda 1 traste 10), separadas por comas.
+   Lo que va entre paréntesis suena a la vez. Un "?" al final de una nota la marca como duda. */
+function parseFill(str) {
+  var steps = [], doubts = 0, re = /\(([^)]*)\)|[^,\s()]+/g, m;
+  function note(tk) {
+    var x = /^([1-6])(\d{1,2})(\?)?$/.exec(tk);
+    if (!x || parseInt(x[2], 10) > 24) return { bad: true, text: tk };
+    return { s: parseInt(x[1], 10), f: parseInt(x[2], 10), doubt: !!x[3], text: tk };
+  }
+  while ((m = re.exec(str))) {
+    var notes = (m[1] != null ? m[1].split(/[\s,\-]+/).filter(Boolean) : [m[0]]).map(note);
+    notes.forEach(function (n) { if (n.bad || n.doubt) doubts++; });
+    if (notes.length) steps.push({ notes: notes, group: m[1] != null });
+  }
+  return { steps: steps, doubts: doubts };
+}
+/* Mini tablatura de un fill (cuerda 1 arriba) */
+function fillTab(steps) {
+  var names = ['e', 'B', 'G', 'D', 'A', 'E'];
+  var rows = names.map(function (n) { return n + '|-'; });
+  steps.forEach(function (st) {
+    var w = 1;
+    st.notes.forEach(function (n) { if (!n.bad) w = Math.max(w, String(n.f).length); });
+    for (var s = 1; s <= 6; s++) {
+      var hit = st.notes.filter(function (n) { return !n.bad && n.s === s; })[0];
+      var cell = hit ? String(hit.f) : '';
+      while (cell.length < w) cell += '-';
+      rows[s - 1] += cell + '-';
+    }
+  });
+  return rows.map(function (r) { return r + '|'; }).join('\n');
+}
 function parseBody(text) {
   var lines = String(text || '').replace(/\r/g, '').split('\n');
   var blocks = [];
@@ -113,6 +145,7 @@ function parseBody(text) {
       continue;
     }
     if ((m = /^\{(intro|outro|interludio)\s*:\s*(.*)\}$/i.exec(t))) blocks.push({ type: 'chords', label: cap(m[1]), tokens: tokenizeLine(m[2]) });
+    else if ((m = /^\{fill(?:\s+([^:}]*?))?\s*:\s*(.*)\}$/i.exec(t))) { var pf = parseFill(m[2]); blocks.push({ type: 'fill', label: (m[1] || '').trim() || 'Fill', text: m[2], steps: pf.steps, doubts: pf.doubts }); }
     else if ((m = /^\{(?:c|comment|nota)\s*:\s*(.*)\}$/i.exec(t))) blocks.push({ type: 'note', text: m[1] });
     else if ((m = /^\{alt\s*:\s*(.*)\}$/i.exec(t))) blocks.push({ type: 'alt', text: m[1] });
     else if (t.charAt(0) === '#') { /* comentario del archivo */ }
@@ -158,6 +191,7 @@ function collectChords(blocks) {
 function countDoubts(blocks) {
   var n = 0;
   blocks.forEach(function (b) {
+    if (b.type === 'fill') { n += b.doubts; return; }
     if (b.type === 'lyric') b.segs.forEach(function (s) {
       if (s.chord == null) return;
       var st = segTokens(s.chord);
@@ -173,7 +207,7 @@ function countDoubts(blocks) {
 function hasUntransposable(blocks) {
   var f = false;
   blocks.forEach(function (b) {
-    if (b.type === 'tab') f = true;
+    if (b.type === 'tab' || b.type === 'fill') f = true;
     else if (b.type === 'lyric') b.segs.forEach(function (s) { var st = s.chord != null && segTokens(s.chord); if (st) walkTokens(st, function (t) { if (t.type === 'fig') f = true; }); });
     else if (b.type === 'chords') walkTokens(b.tokens, function (t) { if (t.type === 'fig') f = true; });
   });
@@ -369,6 +403,7 @@ function toChordPro(song) {
     if (b.type === 'gap') out.push('');
     else if (b.type === 'note') out.push('{comment: ' + b.text + '}');
     else if (b.type === 'alt') out.push('# alternativa: ' + b.text);
+    else if (b.type === 'fill') out.push('{comment: ' + b.label + ': ' + b.text + '}');
     else if (b.type === 'tab') { out.push('{start_of_tab}'); b.lines.forEach(function (x) { out.push(x); }); out.push('{end_of_tab}'); }
     else if (b.type === 'chords') {
       var s = '';
@@ -470,6 +505,15 @@ function listDoubts(body) {
     else if (!inTab) {
       var m;
       if ((m = /^(\{(?:intro|outro|interludio)\s*:\s*)(.*?)(\}\s*)$/i.exec(raw.slice(lead)))) scanChords(m[2], off + lead + m[1].length, i);
+      else if ((m = /^(\{fill(?:\s+[^:}]*?)?\s*:\s*)(.*?)(\}\s*)$/i.exec(raw.slice(lead)))) {
+        var fb = off + lead + m[1].length, pf2 = parseFill(m[2]), fre = /[1-6]\d{1,2}\??|[^,\s()\-]+/g, fm;
+        void pf2;
+        while ((fm = fre.exec(m[2]))) {
+          var fx = /^([1-6])(\d{1,2})(\?)?$/.exec(fm[0]);
+          var bad = !fx || parseInt(fx[2], 10) > 24;
+          if (bad || fx[3]) out.push({ text: fm[0], kind: bad ? 'ilegible' : 'incierto', line: i, start: fb + fm.index, end: fb + fm.index + fm[0].length });
+        }
+      }
       else if (t.charAt(0) === '{' || t.charAt(0) === '#') { /* nota, alternativa o comentario */ }
       else if (t.charAt(0) === '>') scanChords(raw.slice(lead + 1), off + lead + 1, i);
       else {
@@ -489,5 +533,5 @@ function listDoubts(body) {
 export {
   parseChord, chordToString, chordPc, transposeChord, parseKey, flatsFor, keyName,
   tokenizeLine, segTokens, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
-  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, setUserShapes, chordKey
+  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, setUserShapes, chordKey, parseFill, fillTab
 };

@@ -220,5 +220,24 @@ console.log('--- ChordPro ---\n' + cp);
   eq('otras raíces siguen igual', f('D').length > 0 && f('Dm').length > 0, true);
 }
 
+/* fills */
+{
+  const F = '30,32,(63,20),21,23,30,(53,11),23,10';
+  const b = C.parseBody('{fill: ' + F + '}');
+  eq('el fill es un bloque propio', [b.length, b[0].type, b[0].label, b[0].steps.length, b[0].doubts], [1, 'fill', 'Fill', 9, 0]);
+  eq('lo que va entre paréntesis suena a la vez', b[0].steps[2].notes.map((n) => [n.s, n.f]), [[6, 3], [2, 0]]);
+  eq('un fill con nombre', C.parseBody('{fill Puente: 30,32}')[0].label, 'Puente');
+  eq('traste de dos cifras', C.parseBody('{fill: 110,212}')[0].steps.map((x) => [x.notes[0].s, x.notes[0].f]), [[1, 10], [2, 12]]);
+  eq('mini tablatura', C.fillTab(b[0].steps).split('\n'), ['e|-------------1---0-|', 'B|-----0-1-3-----3---|', 'G|-0-2-------0-------|', 'D|-------------------|', 'A|-------------3-----|'.replace('-------------3-----', '-------------3-----') , 'E|-----3-------------|']);
+  eq('seis cuerdas en la tablatura', C.fillTab(b[0].steps).split('\n').length, 6);
+  eq('la 6ª cuerda lleva el 3 del acorde simultáneo', C.fillTab(C.parseBody('{fill: (63,20)}')[0].steps).split('\n').map((r) => r.replace(/[^0-9]/g, '')), ['', '0', '', '', '', '3']);
+  eq('una nota ilegible o con ?', [C.countDoubts(C.parseBody('{fill: 30,77,32?,15}')), C.countDoubts(b)], [2, 0]);
+  eq('no se transpone', C.hasUntransposable(b), true);
+  const ds = C.listDoubts('[C]Hola\n{fill: 30,77,32?}');
+  eq('listDoubts señala las notas dudosas', ds.map((d) => [d.text, d.kind, d.line]), [['77', 'ilegible', 1], ['32?', 'incierto', 1]]);
+  eq('ChordPro lo exporta como comentario', /\{comment: Fill: 30,32\}/.test(C.toChordPro({ title: 'x', artist: '', body: '{fill: 30,32}' })), true);
+  eq('convertSolfege no toca el fill', C.convertSolfege('{fill: 30,32}'), '{fill: 30,32}');
+}
+
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
 process.exitCode = fail ? 1 : 0;

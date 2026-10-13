@@ -292,6 +292,12 @@
   .sp { @apply text-mute; }
   .fig { @apply text-mute border border-dashed border-rule rounded px-[.3em]; font-size: .8em; }
   .doubt { @apply bg-doubt text-doubt-ink rounded-[3px] px-[.25em]; }
+  .fill { @apply my-[.7em]; }
+  .fill .fseq { @apply font-mono ml-2; font-size: .9em; }
+  .fill .fn { @apply font-semibold text-chord; }
+  .fill .fn.doubt { @apply bg-doubt text-doubt-ink rounded px-0.5; }
+  .fill .fg { @apply whitespace-nowrap; }
+  .fill .tab { margin: .35em 0 0; }
   .tab { @apply font-mono leading-tight overflow-x-auto my-[.8em] px-[.9em] py-[.6em] border-l-[3px] border-spruce bg-card whitespace-pre rounded-r-lg; font-size: .78em; }
   .note { @apply font-sans italic text-mute mt-[.9em]; font-size: .72em; }
   .alt { @apply font-sans text-mute border border-dashed border-rule rounded px-2 py-0.5 mt-[.4em] inline-block; font-size: .72em; }
