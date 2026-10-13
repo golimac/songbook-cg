@@ -268,13 +268,13 @@ var RAW = { 'C4': ['033010'], 'G7/9': ['300201'] };
 var MOV_D = { '': [-1, -1, 0, 2, 3, 2], m: [-1, -1, 0, 2, 3, 1], '7': [-1, -1, 0, 2, 1, 2], m7: [-1, -1, 0, 2, 1, 1], maj7: [-1, -1, 0, 2, 2, 2], sus4: [-1, -1, 0, 2, 3, 3] };
 
 /* Todas las posiciones conocidas de un acorde, de la más baja a la más alta del mango */
-function shapesFor(c) {
+function shapesFor(c, noUser) {
   if (!c || c.star) return [];
   var q = qualKey(c.qual);
   var pc = chordPc(c);
   var out = [], seen = {};
   function add(d) { var k = d.frets.join(','); if (seen[k]) return; seen[k] = 1; out.push(d); }
-  userKeys(c).forEach(function (k) {
+  if (!noUser) userKeys(c).forEach(function (k) {
     (USER[k] || []).forEach(function (d) { add({ frets: d.frets.slice(), base: d.base || 1, barre: d.barre ? { fret: d.barre.fret, from: d.barre.from, to: d.barre.to } : null }); });
   });
   var raw = RAW[c.root + c.acc + c.qual + (c.bass ? '/' + c.bass : '')];
