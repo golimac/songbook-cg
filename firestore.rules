@@ -1,19 +1,20 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Cualquiera con el enlace puede leer (modo invitado). Solo el dueño puede escribir.
+    // Cualquiera con el enlace puede leer lo revisado (modo invitado). Solo el dueño escribe y ve el resto.
     // Reemplaza el correo antes de publicar estas reglas en la consola.
     function dueno() {
       return request.auth != null
         && request.auth.token.email_verified == true
         && request.auth.token.email == 'REEMPLAZA_CON_TU_CORREO@gmail.com';
     }
+    // Los invitados solo leen canciones revisadas (y su cuerpo). El dueño lee todo.
     match /songs/{id} {
-      allow read: if true;
+      allow read: if resource.data.status == 'revisada' || dueno();
       allow write: if dueno();
     }
     match /bodies/{id} {
-      allow read: if true;
+      allow read: if get(/databases/$(database)/documents/songs/$(id)).data.status == 'revisada' || dueno();
       allow write: if dueno();
     }
   }

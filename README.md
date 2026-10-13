@@ -4,7 +4,7 @@ Cancionero personal para guitarra: letras con acordes, transposición, diagramas
 
 - **Alojamiento:** Vercel, desde este repositorio (carpeta `public/`, sin paso de compilación).
 - **Datos:** Firebase Firestore. `songs/{id}` guarda los datos livianos de la lista y `bodies/{id}` el cuerpo de cada canción.
-- **Acceso:** cualquiera con el enlace puede ver las canciones (modo invitado: transponer, cejilla, diagramas, autoscroll y exportar, sin editar nada). Escribir exige iniciar sesión con la cuenta del dueño, según `firestore.rules`.
+- **Acceso:** cualquiera con el enlace puede ver las canciones revisadas (las pendientes y con dudas solo las ve el dueño; modo invitado: transponer, cejilla, diagramas, autoscroll y exportar, sin editar nada). Escribir exige iniciar sesión con la cuenta del dueño, según `firestore.rules`.
 
 ## Puesta en marcha
 

@@ -9,7 +9,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, getDoc, onSnapshot, writeBatch, serverTimestamp
+  collection, doc, getDoc, onSnapshot, query, where, writeBatch, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
@@ -41,7 +41,9 @@ export function createFirebaseApi() {
 
     // Lista liviana, en vivo. Devuelve la función para dejar de escuchar.
     subscribeSongs(onData, onError) {
-      return onSnapshot(collection(db, 'songs'), (snap) => {
+      // Los invitados piden solo las revisadas; las reglas de Firestore exigen esa misma condición.
+      const col = collection(db, 'songs');
+      return onSnapshot(auth.currentUser ? col : query(col, where('status', '==', 'revisada')), (snap) => {
         onData(snap.docs.map((d) => Object.assign({ id: d.id }, d.data())));
       }, onError);
     },
