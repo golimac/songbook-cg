@@ -52,6 +52,26 @@ click($('[data-act="share"]'));
 await wait(10);
 ok('copiar enlace avisa con la dirección completa', $$('.toast').some((t) => /s1|Enlace copiado/.test(t.textContent)));
 
+// ---- impresión ----
+let printed = 0; w.print = () => { printed++; };
+click($('[data-act="tp"]')); click($('[data-act="tp"]'));
+click($('[data-act="print"]'));
+ok('abre la hoja de impresión con título, datos y diagramas', !!$('.sheet') && /Camino/.test($('.sheet h1').textContent) && /Tonalidad/.test($('.sh-meta').textContent) && /A/.test($('.sh-meta').textContent) && $$('.pdg .dg').length > 0 && !$('.pdg button'));
+ok('imprime transpuesta', /original G/.test($('.sh-meta').textContent) && /Nota: Afinar un tono más bajo/.test($('.sh-meta').textContent) && !$('#prBody .note'));
+ok('el panel no se imprime y ofrece las opciones', !!$('.opts') && !!$('#prPaper') && !!$('#prMeta') && !!$('#prDg') && !!$('#prCols'));
+const tg = (id, v) => { const el = $('#' + id); if (v !== undefined) el.value = v; else el.checked = !el.checked; el.dispatchEvent(new w.Event('change', { bubbles: true })); };
+tg('prMeta'); ok('sin datos no sale el bloque de datos', !$('.sh-meta'));
+tg('prMeta'); tg('prDg'); ok('sin diagramas no salen', !$('.pdg'));
+tg('prDg'); tg('prCols'); ok('dos columnas', $('.sheet').classList.contains('two'));
+tg('prPaper', 'a4'); ok('A4 ajusta el tamaño de la página', /A4/.test(d.getElementById('pgsz').textContent) && $('.sheet').classList.contains('a4'));
+const fs0 = $('#prBody').getAttribute('style'); click($('[data-act="pfp"]'));
+ok('el tamaño de letra sube', $('#prBody').getAttribute('style') !== fs0);
+ok('las opciones se recuerdan', JSON.parse(w.localStorage.getItem('songbookcg.imprimir')).paper === 'a4');
+click($('[data-act="doprint"]')); ok('imprimir abre el diálogo', printed === 1);
+click($('[data-act="unprint"]'));
+ok('volver conserva la transposición', !!$('#songBody') && $('#tval').textContent === '+2');
+click($('[data-act="back"]')); click($('[data-open="s1"]')); await wait();
+
 // editor: ya con sesión
 click($('#signInTop')); await wait(20);
 go('/c/s2'); await wait(20);

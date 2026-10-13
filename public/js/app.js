@@ -151,8 +151,8 @@ function posIndex(P) {
   var n = P.list.length;
   return n ? (((S.pos[P.disp] || 0) % n) + n) % n : 0;
 }
-function stripHTML(song, ctx) {
-  var can = ctx.ss === 0 && editable();
+function stripHTML(song, ctx, ro) {
+  var can = !ro && ctx.ss === 0 && editable();
   return collectChords(ctx.blocks).map(function (it) {
     var P = positionsFor(song, ctx, it.orig);
     var tag = can ? 'button' : 'div';
@@ -430,7 +430,7 @@ function showSong(song) {
   view.innerHTML =
     '<div class="shead"><div class="sh-t">' + (safeCover(song.cover) ? '<img class="cover" src="' + esc(song.cover) + '" alt="Carátula de ' + esc(song.album || song.title) + '" referrerpolicy="no-referrer">' : '') +
     '<div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, albumLine(song)].filter(Boolean).join(' · ')) + '</p></div></div>' +
-    '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="share">Copiar enlace</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
+    '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="share">Copiar enlace</button><button class="btn" data-act="print">Imprimir</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
     '<div class="controls" id="controls">' +
       '<div class="grp"><span class="lab">Transponer</span><button class="btn sq" data-act="tm" aria-label="Bajar un semitono">−</button><output id="tval">0</output><button class="btn sq" data-act="tp" aria-label="Subir un semitono">+</button><button class="btn" data-act="t0">Original</button></div>' +
       '<div class="grp"><label class="lab" for="capo">Cejilla</label><select id="capo">' + capoOpts + '</select></div>' +
@@ -441,6 +441,53 @@ function showSong(song) {
     '<div id="info"></div><div class="songgrid"><div class="dgs" id="dgStrip"></div><article class="song" id="songBody"></article></div>';
   refreshSong();
   window.scrollTo(0, 0);
+}
+/* ---------- Impresión ---------- */
+var PR_KEY = 'songbookcg.imprimir';
+var PR = { paper: 'letter', meta: true, dg: true, fs: 13, cols: false };
+try { var _pr = JSON.parse(window.localStorage.getItem(PR_KEY) || 'null'); if (_pr) Object.keys(PR).forEach(function (k) { if (_pr[k] != null && typeof _pr[k] === typeof PR[k]) PR[k] = _pr[k]; }); } catch (e) { /* sin almacenamiento */ }
+function savePrefs() { try { window.localStorage.setItem(PR_KEY, JSON.stringify(PR)); } catch (e) { /* sin almacenamiento */ } }
+function showPrint() {
+  stopAuto(); hidePop();
+  S.view = 'print';
+  renderPrint();
+  window.scrollTo(0, 0);
+}
+function backToSong() {
+  var sh = S.shift, cp = S.capo;
+  showSong(S.song);
+  S.shift = sh; S.capo = cp; refreshSong();
+}
+function renderPrint() {
+  var song = S.song, ctx = ctxFor(song, S.shift, S.capo);
+  var notes = [];
+  while (ctx.blocks.length && ctx.blocks[0].type === 'note') notes.push(ctx.blocks.shift().text);
+  var meta = '';
+  if (PR.meta) {
+    var lines = [];
+    if (song.album || song.year) lines.push(esc(albumLine(song)));
+    if (ctx.key) lines.push('Tonalidad: <b>' + esc(keyName(ctx.key, S.shift)) + '</b>' + (S.shift ? ' (original ' + esc(keyName(ctx.key, 0)) + ')' : '') +
+      (S.capo ? ' · cejilla en el traste ' + S.capo + ', formas en <b>' + esc(keyName(ctx.key, ctx.ss)) + '</b>' : ''));
+    if (notes.length) lines.push('Nota: <i>' + esc(notes.join(' · ').replace(/\s+/g, ' ')) + '</i>');
+    meta = '<div class="sh-meta">' + lines.map(function (l) { return '<p>' + l + '</p>'; }).join('') + '</div>';
+  }
+  var head = '<header class="sh-head">' + (PR.meta && safeCover(song.cover) ? '<img class="cover" src="' + esc(song.cover) + '" alt="" referrerpolicy="no-referrer">' : '') +
+    '<div><h1>' + esc(song.title) + '</h1>' + (song.artist ? '<p class="sh-art">' + esc(song.artist) + '</p>' : '') + meta + '</div></header>';
+  var dg = PR.dg ? '<div class="dgs pdg">' + stripHTML(song, ctx, true) + '</div>' : '';
+  var opts = '<aside class="opts" aria-label="Opciones de impresión"><div class="opt-card">' +
+    '<label class="opt"><span>Tamaño del papel</span><select id="prPaper"><option value="letter"' + (PR.paper === 'letter' ? ' selected' : '') + '>Carta</option><option value="a4"' + (PR.paper === 'a4' ? ' selected' : '') + '>A4</option></select></label>' +
+    '<label class="opt"><span>Datos de la canción</span><input type="checkbox" id="prMeta"' + (PR.meta ? ' checked' : '') + '></label>' +
+    '<label class="opt"><span>Diagramas de acordes</span><input type="checkbox" id="prDg"' + (PR.dg ? ' checked' : '') + '></label>' +
+    '<div class="opt"><span>Tamaño de letra</span><span class="grp"><button class="btn sq" type="button" data-act="pfm" aria-label="Letra más pequeña">−</button><output>' + PR.fs + '</output><button class="btn sq" type="button" data-act="pfp" aria-label="Letra más grande">+</button></span></div>' +
+    '<label class="opt"><span>Dos columnas</span><input type="checkbox" id="prCols"' + (PR.cols ? ' checked' : '') + '></label></div>' +
+    '<button class="btn primary big" type="button" data-act="doprint">Imprimir o guardar PDF</button>' +
+    '<button class="btn big" type="button" data-act="unprint">Volver a la canción</button>' +
+    '<p class="hint">En el diálogo de impresión elige "Guardar como PDF" para obtener el archivo. Se imprime con la transposición y la cejilla que tenías en la canción.</p></aside>';
+  view.innerHTML = '<div class="prt"><div class="sheetwrap"><article class="sheet' + (PR.cols ? ' two' : '') + ' ' + PR.paper + '">' + head + dg +
+    '<div class="song" id="prBody" style="--fs:' + PR.fs + 'px">' + blocksHTML(ctx.blocks, ctx, 'view') + '</div></article></div>' + opts + '</div>';
+  var st = document.getElementById('pgsz');
+  if (!st) { st = document.createElement('style'); st.id = 'pgsz'; document.head.appendChild(st); }
+  st.textContent = '@page { size: ' + (PR.paper === 'a4' ? 'A4' : 'letter') + '; margin: 14mm; }';
 }
 function fmtDur(s) { return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
 function refreshSong() {
@@ -832,6 +879,11 @@ view.addEventListener('click', function (e) {
   else if (act === 'edit') openEditor(S.id);
   else if (act === 'export') openExport(S.song);
   else if (act === 'share') copyLink();
+  else if (act === 'print') showPrint();
+  else if (act === 'unprint') backToSong();
+  else if (act === 'doprint') window.print();
+  else if (act === 'pfp') { PR.fs = Math.min(24, PR.fs + 1); savePrefs(); renderPrint(); }
+  else if (act === 'pfm') { PR.fs = Math.max(8, PR.fs - 1); savePrefs(); renderPrint(); }
   else if (act === 'tp') { S.shift = Math.min(11, S.shift + 1); refreshSong(); }
   else if (act === 'tm') { S.shift = Math.max(-11, S.shift - 1); refreshSong(); }
   else if (act === 't0') { S.shift = 0; S.capo = 0; refreshSong(); }
@@ -848,6 +900,11 @@ view.addEventListener('change', function (e) {
   var id = e.target.id;
   if (id === 'capo') { S.capo = parseInt(e.target.value, 10); refreshSong(); }
   else if (id === 'dgToggle') { S.dg = e.target.checked; refreshSong(); }
+  else if (S.view === 'print' && /^pr(Paper|Meta|Dg|Cols)$/.test(id)) {
+    if (id === 'prPaper') PR.paper = e.target.value; else if (id === 'prMeta') PR.meta = e.target.checked;
+    else if (id === 'prDg') PR.dg = e.target.checked; else PR.cols = e.target.checked;
+    savePrefs(); renderPrint();
+  }
 });
 view.addEventListener('submit', function (e) {
   e.preventDefault();

@@ -371,3 +371,44 @@
   .revimg { @apply grid gap-2; }
   .revimg img { @apply w-full h-auto border border-rule rounded-md bg-white; }
 }
+
+/* Impresión de una canción: hoja de vista previa y panel de opciones */
+@layer components {
+  .prt { @apply grid gap-5 items-start; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) { .prt { grid-template-columns: minmax(0, 1fr) 260px; } .opts { @apply sticky; top: calc(var(--hh) + 16px); } }
+  .sheetwrap { @apply overflow-x-auto pb-2; }
+  .sheet { @apply mx-auto bg-white text-[#111] rounded-md px-12 py-10 min-h-[420px]; --fg: #111; --muted: #555; --line: #cfcfcf; --surface: #fff; --chord: #0B5D54; --doubt-bg: #FFE7B0; --doubt-fg: #6E4300;
+    max-width: 816px; box-shadow: 0 1px 2px rgb(0 0 0 / .2), 0 14px 34px -14px rgb(0 0 0 / .5); }
+  .sheet.a4 { max-width: 794px; }
+  .sheet h1 { @apply text-[26px]; }
+  .sh-head { @apply flex items-start gap-4 pb-3 mb-3 border-b; border-color: #cfcfcf; }
+  .sh-head .cover { @apply w-16 h-16 rounded-md; box-shadow: none; }
+  .sh-art { @apply text-lg mt-0.5; color: #444; }
+  .sh-meta { @apply mt-1.5 text-[13px] grid gap-0.5; color: #444; }
+  .sh-meta b { color: #111; }
+  .sheet .pdg { @apply my-2 mb-3 gap-1.5; }
+  .sheet .dg { @apply w-[62px] text-[10px] rounded-md pt-1 pb-0.5; background: #fff; }
+  .sheet .dg svg { @apply w-[50px]; }
+  .sheet .dg b { @apply text-[11px]; }
+  .sheet .song { @apply mt-1; }
+  .sheet.two .song { column-count: 2; column-gap: 32px; }
+  .sheet .ln, .sheet .cl, .sheet .tab { break-inside: avoid; }
+  .opt-card { @apply grid bg-card border border-rule rounded-xl mb-3; }
+  .opt { @apply flex items-center justify-between gap-3 px-4 py-3 text-sm border-b border-rule; }
+  .opt:last-child { @apply border-b-0; }
+  .opt > span:first-child { @apply whitespace-nowrap; }
+  .opt .grp { @apply flex-nowrap gap-1; }
+  .opt output { @apply min-w-6; }
+  .opt select { @apply h-8 text-[13px]; }
+  .opts .btn.big { @apply w-full h-10 mb-2; }
+  .opts .hint { @apply text-xs mt-1; }
+}
+@media print {
+  :root, :root[data-theme="dark"] { color-scheme: light; --bg: #fff; }
+  body { background: #fff !important; padding: 0 !important; }
+  .top, .sfoot, .opts, .toast, .pop, .modal { display: none !important; }
+  main { padding: 0 !important; }
+  .prt { display: block; }
+  .sheetwrap { overflow: visible; padding: 0; }
+  .sheet { max-width: none !important; width: auto; padding: 0; margin: 0; border-radius: 0; box-shadow: none; min-height: 0; }
+}
