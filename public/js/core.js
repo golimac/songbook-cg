@@ -189,6 +189,7 @@ function qualKey(q) {
   if (q === 'M7') return 'maj7';
   if (q === 'min') return 'm';
   if (q === 'min7') return 'm7';
+  if (q === 'ø' || q === 'ø7' || q === 'm7b5') return 'm7b5';
   return q;
 }
 /* Más formas abiertas, formas con bajo distinto y la forma de cejilla con raíz en la cuerda 4 */
@@ -233,6 +234,19 @@ function shapesFor(c) {
       if (k < 2) continue;
       mov.push({ frets: [-1, k, k + 1, k - 1, k + 1, -1], base: k - 1 > 1 ? k - 1 : 1, barre: null });
     }
+  } else if (q === 'm7b5') {
+    /* Semidisminuido: raíz en la cuerda 6, 5 o 4. null = cuerda muda; el resto es traste relativo a la raíz. */
+    [[4, [0, null, 0, 0, -1, null]], [9, [null, 0, 1, 0, 1, null]], [2, [null, null, 0, 1, 1, 1]]].forEach(function (sh) {
+      [mod12(pc - sh[0]), mod12(pc - sh[0]) + 12].forEach(function (r) {
+        if (sh[1].some(function (o) { return o !== null && r + o < 0; })) return;
+        var frets = sh[1].map(function (o) { return o === null ? -1 : r + o; });
+        var played = frets.filter(function (f) { return f >= 0; });
+        if (Math.min.apply(null, played) < 0 || Math.max.apply(null, played) > 15) return;
+        var low = played.filter(function (f) { return f > 0; });
+        var mn = low.length ? Math.min.apply(null, low) : 1;
+        mov.push({ frets: frets, base: mn > 1 ? mn : 1, barre: null });
+      });
+    });
   } else {
     if (MOV_E[q]) push(MOV_E[q], mod12(pc - 4), 'E');
     if (MOV_A[q]) push(MOV_A[q], mod12(pc - 9), 'A');

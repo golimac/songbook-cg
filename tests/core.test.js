@@ -16,6 +16,8 @@ eq('D/F# bajo', C.parseChord('D/F#').bass, 'F#');
 eq('Bd7 se lee como disminuido', C.parseChord('Bd7').qual, 'dim7');
 eq('Bdim7 sigue igual', C.parseChord('Bdim7').qual, 'dim7');
 eq('Bd7 tiene diagrama', C.shapesFor(C.parseChord('Bd7')).length > 0, true);
+eq('Bm7b5: las tres posiciones de la escuela', ['-1,2,3,2,3,-1','7,-1,7,7,6,-1','-1,-1,9,10,10,10'].every(function (k) { return C.shapesFor(C.parseChord('Bm7b5')).some(function (d) { return d.frets.join(',') === k; }); }), true);
+eq('Bø7 y Bm7b5 comparten diagramas', C.shapesFor(C.parseChord('Bø7')).length, C.shapesFor(C.parseChord('Bm7b5')).length);
 eq('Sld7 no es acorde', C.parseChord('Sld7'), null);
 eq('A* variante', C.parseChord('A*').star, true);
 eq('Bdim7', C.parseChord('Bdim7').qual, 'dim7');
