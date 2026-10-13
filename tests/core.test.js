@@ -72,8 +72,9 @@ eq('C abierto', sh('C').frets, [-1, 3, 2, 0, 1, 0]);
 eq('F#m cejilla', [sh('F#m').frets, sh('F#m').base], [[2, 4, 4, 2, 2, 2], 2]);
 eq('Bb cejilla', [sh('Bb').frets, sh('Bb').base], [[-1, 1, 3, 3, 3, 1], 1]);
 eq('Ab (forma E o A)', sh('Ab').barre.fret, 4);
-eq('C4 -> Csus4', sh('C4').frets, [-1, 3, 3, 0, 1, 1]);
-eq('G7/9 sin forma', sh('G7/9'), null);
+eq('C4 -> la forma del cancionero', sh('C4').frets, [0, 3, 3, 0, 1, 0]);
+eq('C4 ofrece también Csus4', C.shapesFor(C.parseChord('C4'))[1].frets, [-1, 3, 3, 0, 1, 1]);
+eq('G7/9 -> la forma del cancionero', sh('G7/9').frets, [3, 0, 0, 2, 0, 1]);
 const shifted = C.shiftDiagram(sh('F'), 2);
 eq('F +2 cejilla', [shifted.frets, shifted.base], [[3, 5, 5, 4, 3, 3], 3]);
 eq('C abierto no se desplaza', C.shiftDiagram(sh('C'), 2), null);
@@ -125,7 +126,7 @@ eq('C tiene varias posiciones', C.shapesFor(C.parseChord('C')).length >= 4, true
 eq('C empieza en la forma abierta', C.shapesFor(C.parseChord('C'))[0].frets, [-1, 3, 2, 0, 1, 0]);
 eq('Bdim7 tiene tres posiciones', C.shapesFor(C.parseChord('Bdim7')).length, 3);
 eq('Bm7b5 tiene tres posiciones', C.shapesFor(C.parseChord('Bm7b5')).length, 3);
-eq('G7/9 sigue sin forma', C.shapesFor(C.parseChord('G7/9')).length, 0);
+eq('G7/9 tiene una sola forma', C.shapesFor(C.parseChord('G7/9')).length, 1);
 eq('A* sin formas de biblioteca', C.shapesFor(C.parseChord('A*')).length, 0);
 
 
@@ -153,6 +154,12 @@ eq('sucesión rápida: acordes para diagramas', C.collectChords(sq).map((x) => x
 eq('sucesión rápida: sin dudas', C.countDoubts(sq), 0);
 eq('sucesión rápida con un acorde ilegible cuenta una duda', C.countDoubts(C.parseBody('[C (Zz-C)]hola')), 1);
 eq('un acorde común no se toma por sucesión', C.segTokens('Am'), null);
+
+// Acordes del impreso con forma propia
+eq('C4 del cancionero: 0 3 3 0 1 0', C.shapesFor(C.parseChord('C4'))[0].frets.join(' '), '0 3 3 0 1 0');
+eq('G7/9: 3 0 0 2 0 1', C.shapesFor(C.parseChord('G7/9'))[0].frets.join(' '), '3 0 0 2 0 1');
+eq('G7/9 no es dudoso', C.parseChord('G7/9').doubt, false);
+eq('D4 sigue siendo sus4', C.shapesFor(C.parseChord('D4'))[0].frets.join(' '), '-1 -1 0 2 3 3');
 
 // ChordPro
 const cp = C.toChordPro({ title: 'Prueba', artist: 'X', key: 'Am', body: '{intro: Am - F}\n[Am]hola [F]mundo\n> G D' });

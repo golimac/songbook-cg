@@ -30,7 +30,7 @@ var SAMPLES = [
     diagrams: { 'A*': { frets: [5, 7, 7, 6, 5, 5], base: 5, barre: { fret: 5, from: 0, to: 5 } } },
     body: '{intro: Am - F - C - G (50-5?-52)}\n\n> Am F C G\n[Am]La luz de enero entra [F]por la ventana\n[C]y despierta el polvo [G]que dormía en la mesa\n[Am]Pongo agua al fuego, [F]busco una canción\n[C]y el día se acomoda [E7?]sobre mi voz\n\n{c: Estribillo, con el acorde alto en el quinto traste}\n[A*]Cada mañana [Dm]vuelve la luz\n[Sld7]sin pedir permiso [E7]ni explicación\n[A*]Cada mañana [Dm]me encuentra igual\n[F]con las manos tibias [E7]y la voz sin afinar' },
   { id: 'ej3', title: 'Marea baja', artist: 'Canción de ejemplo', key: 'F', tuning: '', source: 'Ejemplo 3', status: 'pendiente', page: '', diagrams: {},
-    body: '{intro: F - Bb - C4 - C}\n\n[F]Marea baja, [Bb]barcos sin prisa\n[Gm7]el muelle cuenta [C4]lo que el agua [C]dejó\n[F]Una gaviota [F/A]cruza la bahía\n[Bb]y el faro se queda [Bdim7]solo con su luz [C]\n\n{c: Final, con el acorde de novena}\n[Dm]Vuelve la sal, [G7/9]vuelve el color\n[Bb]y la tarde se [C]aquieta [F]' }
+    body: '{intro: F - Bb - C4 - C}\n\n[F]Marea baja, [Bb]barcos sin prisa\n[Gm7]el muelle cuenta [C4]lo que el agua [C]dejó\n[F]Una gaviota [F/A]cruza la bahía\n[Bb]y el faro se queda [Bdim7]solo con su luz [C]\n\n{c: Final, con el acorde de novena}\n[Dm]Vuelve la sal, [Bb7/9]vuelve el color\n[Bb]y la tarde se [C]aquieta [F]' }
 ];
 
 /* ---------- Estado ---------- */

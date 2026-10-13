@@ -218,6 +218,8 @@ var SLASH = {
   'F/A': ['x03211'], 'Dm/F': ['1x0231'], 'E/G#': ['4x2100'], 'G/F#': ['2x0003'], 'D/A': ['x00232'],
   'A/C#': ['x42220'], 'A/E': ['002220'], 'Em/G': ['320000']
 };
+/* Formas del impreso con nombre propio (cuerdas 6 a 1). Van primero; C4 del cancionero no es C sus4: lleva el mi grave y el mi agudo al aire. */
+var RAW = { 'C4': ['033010'], 'G7/9': ['300201'] };
 var MOV_D = { '': [-1, -1, 0, 2, 3, 2], m: [-1, -1, 0, 2, 3, 1], '7': [-1, -1, 0, 2, 1, 2], m7: [-1, -1, 0, 2, 1, 1], maj7: [-1, -1, 0, 2, 2, 2], sus4: [-1, -1, 0, 2, 3, 3] };
 
 /* Todas las posiciones conocidas de un acorde, de la más baja a la más alta del mango */
@@ -227,6 +229,8 @@ function shapesFor(c) {
   var pc = chordPc(c);
   var out = [], seen = {};
   function add(d) { var k = d.frets.join(','); if (seen[k]) return; seen[k] = 1; out.push(d); }
+  var raw = RAW[c.root + c.acc + c.qual + (c.bass ? '/' + c.bass : '')];
+  if (raw) raw.forEach(function (x) { add(fromCode(x)); });
   if (c.bass) {
     var sl = SLASH[c.root + c.acc + q + '/' + c.bass];
     if (sl) sl.forEach(function (x) { add(fromCode(x)); });

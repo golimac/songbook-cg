@@ -167,7 +167,7 @@ ok('transponer cierra el emergente al redibujar', (click($('[data-act="tp"]')), 
 click($('[data-act="t0"]'));
 click($('[data-act="back"]'));
 click($$('.item').find((i) => /Marea/.test(i.textContent))); await wait();
-click($$('#songBody [data-ch]').find((x) => x.textContent === 'G7/9'));
+click($$('#songBody [data-ch]').find((x) => x.textContent === 'Bb7/9'));
 ok('acorde sin forma lo dice y ofrece dibujar', /No hay una forma conocida/.test(pop.textContent) && !!pop.querySelector('[data-pop="edit"]'));
 const slash = $$('#songBody [data-ch]').find((x) => x.textContent === 'F/A');
 click(slash);
