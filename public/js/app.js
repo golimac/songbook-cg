@@ -66,11 +66,13 @@ function dc(c, ctx) { return transposeChord(c, ctx.ss, ctx.flats); }
 function chAttr(c) { return ' data-ch="' + esc(chordToString(Object.assign({}, c, { doubt: false }))) + '" tabindex="0"'; }
 
 /* ---------- Dibujo de la canción ---------- */
+/* Las marcas de duda son del editor: el invitado ve los acordes normales. */
+function dbt(flag) { return flag && editable() ? ' doubt' : ''; }
 function tokHTML(tokens, ctx) {
   return tokens.map(function (t) {
-    if (t.type === 'chord') return '<span class="ch' + (t.chord.doubt ? ' doubt' : '') + '"' + chAttr(t.chord) + '>' + esc(dc(t.chord, ctx)) + '</span>';
-    if (t.type === 'doubt') return '<span class="ch doubt" title="Lectura dudosa">' + esc(t.text) + '</span>';
-    if (t.type === 'fig') return '<span class="fig' + (t.incomplete ? ' doubt' : '') + '" title="Figura cuerda-traste, no se transpone">' + esc(t.text) + '</span>';
+    if (t.type === 'chord') return '<span class="ch' + dbt(t.chord.doubt) + '"' + chAttr(t.chord) + '>' + esc(dc(t.chord, ctx)) + '</span>';
+    if (t.type === 'doubt') return '<span class="ch' + dbt(true) + '"' + (editable() ? ' title="Lectura dudosa"' : '') + '>' + esc(t.text) + '</span>';
+    if (t.type === 'fig') return '<span class="fig' + dbt(t.incomplete) + '" title="Figura cuerda-traste, no se transpone">' + esc(t.text) + '</span>';
     if (t.type === 'group') return '<span class="sp">(</span>' + tokHTML(t.tokens, ctx) + '<span class="sp">)</span>';
     return '<span class="sp">' + esc(t.text) + '</span>';
   }).join('');
@@ -83,8 +85,8 @@ function lyricHTML(b, ctx) {
     if (s.chord != null) {
       var p = parseChord(s.chord), st = p ? null : segTokens(s.chord);
       if (st) c = '<span class="c cs">' + tokHTML(st, ctx) + '</span>';
-      else c = p ? '<span class="c' + (p.doubt ? ' doubt' : '') + '"' + chAttr(p) + '>' + esc(dc(p, ctx)) + '</span>'
-            : '<span class="c doubt" title="Lectura dudosa">' + esc(s.chord) + '</span>';
+      else c = p ? '<span class="c' + dbt(p.doubt) + '"' + chAttr(p) + '>' + esc(dc(p, ctx)) + '</span>'
+            : '<span class="c' + dbt(true) + '"' + (editable() ? ' title="Lectura dudosa"' : '') + '>' + esc(s.chord) + '</span>';
     } else c = '<span class="c"> </span>';
     return '<span class="seg">' + c + '<span class="t">' + esc(s.text) + '</span></span>';
   }).join('') + '</div>';
@@ -525,7 +527,7 @@ function refreshSong() {
   while (ctx.blocks.length && ctx.blocks[0].type === 'note') notes.push(ctx.blocks.shift().text);
   if (notes.length) info += '<p class="info">Nota: <i>' + esc(notes.join(' · ').replace(/\s+/g, ' ')) + '</i></p>';
   var n = countDoubts(ctx.blocks);
-  if (n) info += '<div class="banner warn">' + n + (n === 1 ? ' marca por revisar, resaltada' : ' marcas por revisar, resaltadas') + ' en ámbar. Se corrigen en el editor.</div>';
+  if (n && editable()) info += '<div class="banner warn">' + n + (n === 1 ? ' marca por revisar, resaltada' : ' marcas por revisar, resaltadas') + ' en ámbar. Se corrigen en el editor.</div>';
   if (ctx.ss !== 0 && hasUntransposable(ctx.blocks)) info += '<div class="banner">Las figuras cuerda-traste y las tablaturas conservan su posición original.</div>';
   $('#info').innerHTML = info;
   var strip = $('#dgStrip');

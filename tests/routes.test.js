@@ -30,7 +30,7 @@ const api = {
   onAuth(cb) { authCb = cb; cb(null); return () => {}; },
   async signIn() { authCb({ uid: 'u', email: 'yo@example.test' }); }, async signOut() { authCb(null); },
   subscribeSongs(ok2) { setTimeout(() => ok2(list.map((s) => ({ ...s }))), 0); return () => {}; },
-  async getBody(id) { return { body: (id === 's3' ? '[C (C4-C-G7-C)]Hola [C-F-C]mundo\n' : '{c: Afinar un tono más bajo}\n') + '[G]Hola', diagrams: {} }; },
+  async getBody(id) { return { body: (id === 's3' ? '[C (C4-C-G7-C)]Hola [C-F-C]mundo [Zz]raro\n' : '{c: Afinar un tono más bajo}\n') + '[G]Hola', diagrams: {} }; },
   saveSong() { return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
 };
 start(api); await wait(30);
@@ -44,6 +44,7 @@ go('/c/s3'); await wait(20);
 ok('el historial abre otra canción', !!$('#songBody') && /Otra/.test($('h1').textContent));
 ok('una sucesión rápida dentro del acorde se dibuja entera y sin ámbar', $('.seg .c.cs') && $('.seg .c.cs').textContent === 'C (C4-C-G7-C)' && !$('#songBody .doubt') && $$('#dgStrip .dg').length === 5 && $$('.seg .c.cs')[1].textContent === 'C-F-C');
 click($('[data-act="tp"]')); click($('[data-act="tp"]'));
+ok('el invitado no ve marcas de duda ni el aviso del editor', !$('.banner') && !$('#songBody [title="Lectura dudosa"]') && !!$$('#songBody .c').find((c) => c.textContent === 'Zz'));
 ok('y se transpone completa', $('.seg .c.cs').textContent === 'D (D4-D-A7-D)');
 click($('[data-act="t0"]'));
 ok('sin nota en la letra no sale la línea de nota', !/Nota:/.test($('#info').textContent));
