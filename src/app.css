@@ -63,6 +63,10 @@
   select:hover, input:hover, textarea:hover { border-color: color-mix(in srgb, var(--muted) 55%, var(--line)); }
   select:focus, input:focus, textarea:focus { @apply outline-none border-spruce; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
   input::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); }
+  input[type=file] { @apply w-full h-auto cursor-pointer text-sm text-mute bg-card border border-dashed border-rule rounded-lg p-2.5 transition-colors; }
+  input[type=file]:hover { @apply border-spruce; }
+  input[type=file]::file-selector-button { @apply mr-3 h-8 px-3.5 text-sm font-medium rounded-lg border border-rule bg-paper text-ink cursor-pointer transition-colors; }
+  input[type=file]:hover::file-selector-button { @apply border-spruce; }
   input[type=range] { @apply w-28; accent-color: var(--accent); }
   input[type=checkbox] { accent-color: var(--accent); }
 }
