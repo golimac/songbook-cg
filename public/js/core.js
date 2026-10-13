@@ -113,7 +113,7 @@ function parseFill(str) {
   return { steps: steps, doubts: doubts };
 }
 /* Mini tablatura de un fill (cuerda 1 arriba) */
-function fillTab(steps) {
+function fillTab(steps, mark) {
   var names = ['e', 'B', 'G', 'D', 'A', 'E'];
   var rows = names.map(function (n) { return n + '|-'; });
   steps.forEach(function (st) {
@@ -121,9 +121,9 @@ function fillTab(steps) {
     st.notes.forEach(function (n) { if (!n.bad) w = Math.max(w, String(n.f).length); });
     for (var s = 1; s <= 6; s++) {
       var hit = st.notes.filter(function (n) { return !n.bad && n.s === s; })[0];
-      var cell = hit ? String(hit.f) : '';
-      while (cell.length < w) cell += '-';
-      rows[s - 1] += cell + '-';
+      var txt = hit ? String(hit.f) : '', pad = '';
+      while (txt.length + pad.length < w) pad += '-';
+      rows[s - 1] += (hit && mark ? mark(hit, txt) : txt) + pad + '-';
     }
   });
   return rows.map(function (r) { return r + '|'; }).join('\n');

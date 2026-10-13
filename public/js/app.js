@@ -95,9 +95,11 @@ function lyricHTML(b, ctx) {
   }).join('') + '</div>';
 }
 function fillHTML(b) {
-  function nt(n) { return '<span class="fn' + (n.bad || n.doubt ? dbt(true) : '') + '">' + esc(n.text) + '</span>'; }
-  var seq = b.steps.map(function (st) { return st.group ? '<span class="fg">(' + st.notes.map(nt).join(' ') + ')</span>' : nt(st.notes[0]); }).join(' ');
-  return '<div class="fill"><span class="lab">' + esc(b.label) + '</span><span class="fseq">' + seq + '</span><pre class="tab">' + esc(fillTab(b.steps)) + '</pre></div>';
+  var ed = editable();
+  var tab = fillTab(b.steps, function (n, t) { return ed && n.doubt ? '<span class="fn doubt">' + esc(t) + '</span>' : esc(t); });
+  var bad = ed ? b.steps.reduce(function (a, st) { return a.concat(st.notes.filter(function (n) { return n.bad; })); }, []) : [];
+  return '<div class="fill"><span class="lab">' + esc(b.label) + '</span><pre class="tab">' + tab + '</pre>' +
+    (bad.length ? '<div class="fillbad">No se pudo leer: ' + bad.map(function (n) { return '<span class="fn doubt">' + esc(n.text) + '</span>'; }).join(' ') + '</div>' : '') + '</div>';
 }
 function blocksHTML(blocks, ctx, mode) {
   return blocks.map(function (b) {
@@ -201,7 +203,7 @@ S.pendingId = pathId();
 function routeSong(id) {
   if (!listLoaded) { S.pendingId = id; return; }
   if (songs.some(function (s) { return s.id === id; })) { openSong(id); return; }
-  imp.cancel(); stopAuto(); hidePop(); S.review = null; S.view = 'library'; S.song = null;
+  imp.cancel(); stopAuto(); hidePop(); S.review = null; S.view = 'library'; S.song = null; S.opening = '';
   document.title = 'Songbook CG';
   view.innerHTML = '<div class="login"><h1>Canción no disponible</h1><p class="hint">Este enlace no corresponde a ninguna canción que puedas ver.</p>' +
     '<button class="btn primary" type="button" data-lib="home">Ir a la biblioteca</button></div>';
@@ -223,7 +225,7 @@ function renderLibrary() {
   document.title = 'Songbook CG';
   imp.cancel(); stopAuto(); hidePop();
   S.review = null;
-  S.view = 'library'; S.song = null;
+  S.view = 'library'; S.song = null; S.opening = '';
   view.innerHTML = '<div id="lib"></div>';
   var jumping = !!LIB.jump;
   fillList();
@@ -325,7 +327,7 @@ function chordNames() {
 function chordPcOf(c) { var k = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[c.root] + (c.acc === '#' ? 1 : c.acc === 'b' ? -1 : 0); return (k + 12) % 12; }
 function chordBox() {
   var names = chordNames();
-  if (!names.length && !editable()) return '';
+  if (!editable()) return '';
   return homeBox('b-ch', 'Acordes', plural(names.length, 'acorde', 'acordes'), IC.ch, names.slice(0, HOME_N).map(function (n) {
     return '<button type="button" class="mini" data-lib="acordes">' + avatar(n) + '<span class="mi-t"><b>' + esc(n) + '</b></span><span class="mi-m">' + plural(chordLib[n].length, 'forma', 'formas') + '</span></button>';
   }).join(''), 'acordes', 'Aquí quedan los diagramas que guardes sin que pertenezcan a una canción.');
@@ -446,7 +448,7 @@ function fillList() {
       : '<div class="empty"><p>La biblioteca está vacía.</p></div>';
     return;
   }
-  if (LIB.page === 'pendientes' && !editable()) LIB.page = 'home';
+  if ((LIB.page === 'pendientes' || LIB.page === 'acordes') && !editable()) LIB.page = 'home';
   var page = LIB.page === 'artista' && !songs.some(function (s) { return hasArtist(s, LIB.artist); }) ? 'artistas' : LIB.page;
   box.innerHTML = S.q.trim() ? resultsHTML(S.q)
     : page === 'todas' ? todasHTML() : page === 'artistas' ? artistasHTML() : page === 'artista' ? artistaHTML()
@@ -494,8 +496,9 @@ function openSong(id) {
   var meta = songs.filter(function (s) { return s.id === id; })[0];
   if (!meta) return;
   view.innerHTML = '<p class="hint">Abriendo canción…</p>';
+  S.opening = id;
   api.getBody(id).then(function (b) {
-    if (S.view === 'song' && S.id !== id) return;
+    if (S.opening !== id) return;
     showSong(Object.assign({ diagrams: {}, prefs: {} }, meta, { body: b.body || '', diagrams: b.diagrams || {}, prefs: b.prefs || {} }));
   }, function (e) {
     toast('No se pudo abrir la canción: ' + ((e && e.message) || 'sin conexión y sin copia local'), true);

@@ -29,8 +29,9 @@ const list = [
 const api = {
   onAuth(cb) { authCb = cb; cb(null); return () => {}; },
   async signIn() { authCb({ uid: 'u', email: 'yo@example.test' }); }, async signOut() { authCb(null); },
+  subscribeChords(ok2) { setTimeout(() => ok2([{ name: 'Am7', shapes: [{ frets: [-1, 0, 2, 0, 1, 0], base: 1, barre: null }] }]), 0); return () => {}; },
   subscribeSongs(ok2) { setTimeout(() => ok2(list.map((s) => ({ ...s }))), 0); return () => {}; },
-  async getBody(id) { const sv = saved.filter((x) => x.id === id).pop(); return { prefs: sv ? sv.prefs : {}, body: (id === 's3' ? '[C (C4-C-G7-C)]Hola [C-F-C]mundo [Zz]raro\n' : '{c: Afinar un tono más bajo}\n') + '[G]Hola', diagrams: {} }; },
+  async getBody(id) { const sv = saved.filter((x) => x.id === id).pop(); return { prefs: sv ? sv.prefs : {}, body: id === 's5' ? '{fill: 30,32?,77}\n[C]Hola\n' : (id === 's3' ? '[C (C4-C-G7-C)]Hola [C-F-C]mundo [Zz]raro\n' : '{c: Afinar un tono más bajo}\n') + '[G]Hola', diagrams: {} }; },
   saveSong(s) { saved.push(JSON.parse(JSON.stringify(s))); return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
 };
 start(api); await wait(30);
@@ -95,7 +96,19 @@ ok('volver conserva la transposición', !!$('#songBody') && $('#tval').textConte
 click($('[data-act="back"]')); click($('[data-open="s1"]')); await wait();
 
 // editor: ya con sesión
+// ---- invitado: fills y portada ----
+go('/c/s5'); await wait(20);
+ok('de una canción a otra por el historial se abre la segunda', !!$('#songBody'));
+ok('el fill se dibuja con su etiqueta y tablatura, sin la línea de números', !!$('.fill .lab') && $('.fill .lab').textContent === 'Fill' && /^e\|/.test($('.fill .tab').textContent) && !$('.fill .fseq'));
+ok('el invitado no ve las notas dudosas del fill', !$('.fill .fn.doubt') && !$('.fill .fillbad'));
+go('/'); await wait(20);
+ok('la portada del invitado no tiene la caja Acordes', !$('.b-ch') && !!$('.b-new'));
 click($('#signInTop')); await wait(20);
+ok('la portada del editor sí la tiene', !!$('.b-ch'));
+go('/c/s5'); await wait(20);
+ok('el editor ve la nota dudosa en la tablatura y la ilegible aparte', !!$('.fill .tab .fn.doubt') && /77/.test($('.fillbad').textContent));
+go('/'); await wait(20);
+
 go('/c/s2'); await wait(20);
 ok('el editor ve la pendiente por enlace', !!$('#songBody') && /Borrador/.test($('h1').textContent));
 // ---- posición principal de un acorde: solo con el editor abierto ----
