@@ -360,6 +360,42 @@ function convertSolfege(body) {
   }).join('\n');
 }
 
+/* Acordes sobre la letra: una línea solo de acordes seguida de una línea de letra pasa a [Acorde] dentro de la letra.
+   Acepta solfeo (LAm, MI/SOL#). "E - Bdim7" o "E · Bdim7" se agrupan en un solo corchete. */
+function chordLineInfo(line) {
+  if (!/\S/.test(line) || line.charAt(0) === '>' || line.charAt(0) === '{') return null;
+  var re = /\S+/g, m, groups = [], last = null;
+  while ((m = re.exec(line))) {
+    var tk = m[0];
+    if (tk === '-' || tk === '·') { if (!last) return null; last.sep = tk; continue; }
+    var c = solToLetter(tk);
+    if (!parseChord(c)) return null;
+    if (last && last.sep) { last.text += ' ' + last.sep + ' ' + c; last.sep = ''; }
+    else { last = { col: m.index, text: c, sep: '' }; groups.push(last); }
+  }
+  if (!groups.length || (last && last.sep)) return null;
+  return groups;
+}
+function chordsAbove(text) {
+  var lines = String(text || '').split('\n'), out = [], n = 0;
+  for (var i = 0; i < lines.length; i++) {
+    var g = chordLineInfo(lines[i]);
+    if (!g) { out.push(lines[i]); continue; }
+    var next = lines[i + 1];
+    if (next == null || !/\S/.test(next) || chordLineInfo(next) || /^[>{]/.test(next)) {
+      out.push('> ' + g.map(function (x) { return x.text; }).join(' ')); n++; continue;
+    }
+    var lyric = next;
+    for (var k = g.length - 1; k >= 0; k--) {
+      var col = g[k].col;
+      if (col > lyric.length) lyric += new Array(col - lyric.length + 1).join(' ');
+      lyric = lyric.slice(0, col) + '[' + g[k].text + ']' + lyric.slice(col);
+    }
+    out.push(lyric.replace(/\s+$/, '')); n++; i++;
+  }
+  return { text: out.join('\n'), count: n };
+}
+
 /* Dudas del texto con su posición (índices de carácter dentro del cuerpo) para saltar a ellas en el editor */
 function listDoubts(body) {
   var out = [], lines = String(body || '').split('\n'), off = 0, inTab = false;
@@ -404,5 +440,5 @@ function listDoubts(body) {
 export {
   parseChord, chordToString, chordPc, transposeChord, parseKey, flatsFor, keyName,
   tokenizeLine, segTokens, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
-  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts
+  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove
 };

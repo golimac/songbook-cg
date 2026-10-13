@@ -1,6 +1,6 @@
 import {
   parseChord, chordToString, transposeChord, parseKey, flatsFor, keyName, parseBody, collectChords,
-  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts
+  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove
 } from './core.js';
 import { imaging as realImaging } from './photo.js';
 import { createImporter } from './import.js';
@@ -610,9 +610,11 @@ function openEditor(id, review) {
         '<div class="actions"><button type="button" class="btn" id="alFind">Buscar álbum</button><button type="button" class="btn" id="alClear">Quitar álbum</button><span class="hint" id="alMsg" role="status"></span></div>' +
         '<div class="alres" id="alRes" hidden></div></div></div>' +
       '<label class="f">Letra y acordes<textarea id="fBody" spellcheck="false"></textarea></label>' +
+      '<div class="actions"><button type="button" class="btn" id="edAbove">Convertir acordes sobre la letra</button><span class="hint" id="abMsg" role="status"></span></div>' +
       '<details class="syntax"><summary>Cómo se escribe</summary><ul>' +
         '<li><code>[Am]</code> pone el acorde sobre la sílaba que sigue. Varios acordes sobre la misma sílaba van juntos: <code>[C-F-C]</code> o <code>[C (C4-C-G7-C)]</code>. Una figura cuerda-traste puede ir con o sin paréntesis: <code>(52)</code> o <code>62-63-63</code>.</li>' +
         '<li><code>&gt; G D Em</code> escribe una línea solo de acordes.</li>' +
+        '<li>Si pegas la letra con los acordes en una línea encima, alineados con las sílabas, el botón <b>Convertir acordes sobre la letra</b> los pasa a <code>[Am]</code>. Acepta solfeo.</li>' +
         '<li><code>{intro: G - D (50-60-62)}</code> escribe la introducción. Cada grupo entre paréntesis es cuerda y traste, y no se transpone.</li>' +
         '<li><code>{c: texto}</code> agrega una nota.</li>' +
         '<li><code>{sot}</code> y <code>{eot}</code> encierran una tablatura.</li>' +
@@ -957,6 +959,11 @@ view.addEventListener('click', function (e) {
   if (e.target.id === 'edSkip' && S.review) { var r1 = S.review; S.review = null; r1.onSkip(); }
   else if (e.target.id === 'edAbort' && S.review) { var r2 = S.review; S.review = null; r2.onAbort(); }
   else if (e.target.getAttribute && e.target.getAttribute('data-rev')) revGo(e.target.getAttribute('data-rev') === 'next' ? 1 : -1);
+  else if (e.target.id === 'edAbove') {
+    var ta0 = $('#fBody'), r0 = chordsAbove(ta0.value);
+    if (!r0.count) { $('#abMsg').textContent = 'No encontré líneas de acordes sobre la letra.'; }
+    else { ta0.value = r0.text; ta0.dispatchEvent(new Event('input', { bubbles: true })); $('#abMsg').textContent = r0.count + ' líneas convertidas.'; }
+  }
   else if (e.target.id === 'edCancel') { if (S.isNew) renderLibrary(); else showSong(S.song); }
   else if (e.target.id === 'edDel') {
     var b = e.target;

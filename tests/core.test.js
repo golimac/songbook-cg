@@ -181,5 +181,16 @@ const cp = C.toChordPro({ title: 'Prueba', artist: 'X', key: 'Am', body: '{intro
 const cp2 = C.toChordPro({ title: 'T', album: 'Disco', year: '1975', body: '' });
 eq('ChordPro lleva álbum y año', /\{album: Disco\}/.test(cp2) && /\{year: 1975\}/.test(cp2), true);
 console.log('--- ChordPro ---\n' + cp);
+/* acordes sobre la letra (texto inventado) */
+{
+  const r = C.chordsAbove('Am         E\nLuna sobre el río\n\nLAm   MI - SId7\nVa la nave\n\nG D\n\nFin');
+  const L = r.text.split('\n');
+  eq('acordes sobre la letra', L[0], '[Am]Luna sobre [E]el río');
+  eq('solfeo y grupo con guion', L[2], '[Am]Va la [E - Bdim7]nave');
+  eq('línea sola de acordes', L[4], '> G D');
+  eq('cuenta', r.count, 3);
+  eq('sin acordes no cambia', C.chordsAbove('Hola mundo\notra línea').count, 0);
+}
+
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
 process.exitCode = fail ? 1 : 0;
