@@ -77,7 +77,7 @@ ok('tira de diagramas con G', $$('#dgStrip .dg b').some((b) => b.textContent ===
 const chordsOf = () => $$('#songBody .seg .c').map((c) => c.textContent.trim()).filter(Boolean);
 const before = chordsOf();
 click($('[data-act="tp"]'));
-ok('+1 semitono: G -> Ab', chordsOf().includes('Ab') && /Suena en Ab/.test($('#info').textContent));
+ok('+1 semitono: G -> Ab', chordsOf().includes('Ab') && /Tonalidad: Ab/.test($('#info').textContent));
 ok('aviso de figuras sin transponer', /conservan su posición/.test($('#info').textContent));
 click($('[data-act="t0"]'));
 ok('original restaura', JSON.stringify(chordsOf()) === JSON.stringify(before));

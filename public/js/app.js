@@ -277,7 +277,7 @@ function refreshSong() {
   $('#durv').textContent = fmtDur(S.dur);
   var info = '';
   if (ctx.key) {
-    info += '<p class="info">Suena en <b>' + esc(keyName(ctx.key, S.shift)) + '</b>' + (S.shift ? ' (original ' + esc(keyName(ctx.key, 0)) + ')' : '') +
+    info += '<p class="info">Tonalidad: <b>' + esc(keyName(ctx.key, S.shift)) + '</b>' + (S.shift ? ' (original ' + esc(keyName(ctx.key, 0)) + ')' : '') +
       (S.capo ? ' · cejilla en el traste ' + S.capo + ', formas en <b>' + esc(keyName(ctx.key, ctx.ss)) + '</b>' : '') +
       (ctx.inferred ? ' · tonalidad tomada del primer acorde' : '') + '</p>';
   } else info += '<p class="info">La canción no tiene tonalidad definida.</p>';
