@@ -161,6 +161,15 @@ eq('[C-F-C]: acordes para diagramas', C.collectChords(sq2).map((x) => x.orig).jo
 eq('[C-F-C]: sin dudas', C.countDoubts(sq2), 0);
 eq('[Zz-Yy] sigue siendo una duda', C.countDoubts(C.parseBody('[Zz-Yy]hola')), 1);
 
+// Figuras cuerda-traste sin paréntesis dentro de una línea de acordes: A (G - D/F# 62-63-63 A - G)
+const fg = C.parseBody('> A (G - D/F# 62-63-63 A - G)');
+const flat = []; (function w(ts) { ts.forEach((x) => { if (x.type === 'group') w(x.tokens); else flat.push(x); }); })(fg[0].tokens);
+eq('62-63-63 es una figura, no una duda', flat.filter((x) => x.type === 'fig').map((x) => x.text).join(), '62-63-63');
+eq('los acordes del grupo se leen', flat.filter((x) => x.type === 'chord').map((x) => x.text).join(), 'A,G,D/F#,A,G');
+eq('sin dudas', C.countDoubts(fg), 0);
+eq('en la letra también', C.countDoubts(C.parseBody('[A (G - D/F# 62-63-63 A - G)]hola')), 0);
+eq('un solo par suelto sigue siendo duda', C.countDoubts(C.parseBody('> A 62')), 1);
+
 // Acordes del impreso con forma propia
 eq('C4 del cancionero: 0 3 3 0 1 0', C.shapesFor(C.parseChord('C4'))[0].frets.join(' '), '0 3 3 0 1 0');
 eq('G7/9: 3 0 0 2 0 1', C.shapesFor(C.parseChord('G7/9'))[0].frets.join(' '), '3 0 0 2 0 1');

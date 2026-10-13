@@ -57,10 +57,10 @@ function keyName(key, shift) {
   return (fl ? FLAT : SHARP)[pc] + (key.minor ? 'm' : '');
 }
 
-/* Líneas de acordes: acordes, figuras cuerda-traste (no se transponen), separadores */
+/* Líneas de acordes: acordes, figuras cuerda-traste (no se transponen; con o sin paréntesis: (52) o 62-63-63), separadores */
 function tokenizeLine(str) {
   var out = [];
-  var re = /(\([^)]*\)|[^\s\-·()]+|[\s\-·]+|[()])/g;
+  var re = /(\([^)]*\)|[1-6]\d{1,2}(?:-[1-6]\d{1,2})+|[^\s\-·()]+|[\s\-·]+|[()])/g;
   var m;
   while ((m = re.exec(str))) {
     var t = m[0];
@@ -68,6 +68,8 @@ function tokenizeLine(str) {
       var inner = t.slice(1, -1);
       if (/^[\dIVXivx?\s\-]*$/.test(inner)) out.push({ type: 'fig', text: t, incomplete: inner.indexOf('?') >= 0 });
       else out.push({ type: 'group', tokens: tokenizeLine(inner) });
+    } else if (/^[1-6]\d{1,2}(?:-[1-6]\d{1,2})+$/.test(t)) {
+      out.push({ type: 'fig', text: t, incomplete: false });
     } else if (/^[\s\-·]+$/.test(t) || t === '(' || t === ')') {
       out.push({ type: 'sep', text: t });
     } else {
