@@ -167,42 +167,21 @@ function stripHTML(song, ctx) {
 
 /* ---------- Biblioteca ---------- */
 var STATUS = { pendiente: ['Pendiente', ''], dudas: ['Con dudas', 'warn'], revisada: ['Revisada', 'ok'] };
-var LIB = { view: 'az', st: 'todas' };
-var LIB_VIEWS = [['az', 'A–Z'], ['artistas', 'Artistas'], ['recientes', 'Recientes']];
-function stamp(t) { return t && typeof t.toMillis === 'function' ? t.toMillis() : typeof t === 'number' ? t : t === null ? Date.now() : 0; }
-function ago(ms) {
-  if (!ms) return '';
-  var m = Math.round((Date.now() - ms) / 60000);
-  if (m < 2) return 'hace un momento';
-  if (m < 60) return 'hace ' + m + ' min';
-  var h = Math.round(m / 60);
-  if (h < 24) return 'hace ' + h + (h === 1 ? ' hora' : ' horas');
-  var d = Math.round(h / 24);
-  if (d < 31) return d === 1 ? 'ayer' : 'hace ' + d + ' días';
-  return new Date(ms).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+/* La portada reúne los accesos; la lista completa vive solo en "Todas". */
+var LIB = { page: 'home', artist: '', jump: '' };
+var RV_KEY = 'songbookcg.vistas';
+function vistas() { try { return JSON.parse(window.localStorage.getItem(RV_KEY) || '[]'); } catch (e) { return []; } }
+function marcarVista(id) {
+  try { window.localStorage.setItem(RV_KEY, JSON.stringify([id].concat(vistas().filter(function (x) { return x !== id; })).slice(0, 24))); } catch (e) { /* sin almacenamiento */ }
 }
 function renderLibrary() {
   imp.cancel(); stopAuto(); hidePop();
   S.review = null;
   S.view = 'library'; S.song = null;
-  view.innerHTML = '<div class="libhead"><h1>Biblioteca</h1><div class="tabs" role="tablist" aria-label="Cómo ordenar">' +
-    LIB_VIEWS.map(function (v) { return '<button type="button" role="tab" class="tab-b" data-lv="' + v[0] + '" aria-selected="' + (LIB.view === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div></div>' +
-    '<div id="stats"></div>' +
-    '<input id="q" type="search" placeholder="Buscar por título o artista" autocomplete="off" aria-label="Buscar canciones">' +
-    '<p class="count" id="count"></p><div class="libbody"><div class="list" id="list"></div><nav class="rail" id="rail" aria-label="Ir a la letra"></nav></div>';
-  $('#q').value = S.q;
+  view.innerHTML = '<div id="lib"></div>';
+  var jumping = !!LIB.jump;
   fillList();
-}
-function statsHTML() {
-  var c = { todas: songs.length, revisada: 0, dudas: 0, pendiente: 0 };
-  songs.forEach(function (s) { c[STATUS[s.status] ? s.status : 'pendiente']++; });
-  var pct = function (n) { return c.todas ? (n * 100 / c.todas).toFixed(1) : 0; };
-  function b(key, label, n, cls) {
-    return '<button type="button" class="stb ' + cls + '" data-st="' + key + '" aria-pressed="' + (LIB.st === key) + '"><b>' + n + '</b> ' + label + '</button>';
-  }
-  return '<div class="prog" aria-hidden="true"><i class="p-ok" style="width:' + pct(c.revisada) + '%"></i><i class="p-dd" style="width:' + pct(c.dudas) + '%"></i></div>' +
-    '<div class="stbar">' + b('todas', 'en total', c.todas, '') + b('revisada', c.revisada === 1 ? 'revisada' : 'revisadas', c.revisada, 'ok') +
-    b('dudas', 'con dudas', c.dudas, 'warn') + b('pendiente', c.pendiente === 1 ? 'pendiente' : 'pendientes', c.pendiente, '') + '</div>';
+  if (!jumping) window.scrollTo(0, 0);
 }
 function songItem(s, sub) {
   var n = s.doubts || 0;
@@ -227,51 +206,91 @@ function itemsHTML(list, withArtist) {
 }
 function byTitle(a, b) { return String(a.title).localeCompare(String(b.title), 'es') || String(a.artist).localeCompare(String(b.artist), 'es'); }
 function letterOf(t) { var c = norm(t).replace(/[^a-z0-9]/g, '').charAt(0).toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; }
+function artistName(s) { return (s.artist || '').trim() || 'Sin artista'; }
+function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+function crumb(back, title, count) {
+  return '<div class="crumb"><button type="button" class="btn" data-lib="' + back[0] + '">← ' + back[1] + '</button><h1>' + esc(title) + (count != null ? '<span>' + count + '</span>' : '') + '</h1></div>';
+}
+var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
+
+function homeHTML() {
+  var byId = {}; songs.forEach(function (s) { byId[s.id] = s; });
+  var seen = vistas().map(function (id) { return byId[id]; }).filter(Boolean).slice(0, 8);
+  var have = {}; songs.forEach(function (s) { have[letterOf(s.title)] = 1; });
+  var artists = {}; songs.forEach(function (s) { artists[norm(artistName(s))] = 1; });
+  var pend = songs.filter(function (s) { return s.status !== 'revisada'; }).length;
+  return (seen.length
+    ? '<h2 class="hh">Visto recientemente</h2><div class="vstrip">' + seen.map(function (s) {
+        return '<button class="vcard" data-open="' + esc(s.id) + '"><span class="it-title">' + esc(s.title) + '</span>' +
+          '<span class="vc-sub">' + esc(s.artist || '') + '</span>' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') + '</button>';
+      }).join('') + '</div>' : '') +
+    '<h2 class="hh">Explorar</h2>' +
+    '<div class="azrow" role="group" aria-label="Ir a la letra">' + LETTERS.map(function (L) {
+      return '<button type="button" class="az" data-letter="' + L + '"' + (have[L] ? '' : ' disabled') + '>' + L + '</button>';
+    }).join('') + '</div>' +
+    '<div class="expl">' +
+      '<button type="button" class="bigb" data-lib="todas"><b>Todas</b><span>' + plural(songs.length, 'canción', 'canciones') + '</span></button>' +
+      '<button type="button" class="bigb" data-lib="artistas"><b>Artistas</b><span>' + plural(Object.keys(artists).length, 'artista', 'artistas') + '</span></button>' +
+      '<button type="button" class="bigb" data-lib="pendientes"><b>Pendientes</b><span>' + pend + ' por revisar</span></button>' +
+    '</div>';
+}
+function todasHTML() {
+  var items = songs.slice().sort(byTitle), groups = {}, letters = [];
+  items.forEach(function (s) { var L = letterOf(s.title); if (!groups[L]) { groups[L] = []; letters.push(L); } groups[L].push(s); });
+  return crumb(['home', 'Inicio'], 'Todas', items.length) + '<div class="libbody"><div class="list">' +
+    letters.map(function (L) { return '<h2 class="lg" id="g-' + (L === '#' ? 'num' : L) + '">' + L + '</h2>' + itemsHTML(groups[L], true); }).join('') +
+    '</div><nav class="rail" aria-label="Ir a la letra">' + (items.length >= 24
+      ? letters.map(function (L) { return '<button type="button" data-jump="' + (L === '#' ? 'num' : L) + '" aria-label="Ir a ' + L + '">' + L + '</button>'; }).join('') : '') + '</nav></div>';
+}
+function artistasHTML() {
+  var by = {};
+  songs.forEach(function (s) { var a = artistName(s); (by[a] = by[a] || []).push(s); });
+  var names = Object.keys(by).sort(function (a, b) {
+    if (a === 'Sin artista') return 1; if (b === 'Sin artista') return -1;
+    return a.localeCompare(b, 'es');
+  });
+  return crumb(['home', 'Inicio'], 'Artistas', names.length) + '<div class="agrid">' + names.map(function (a) {
+    return '<button type="button" class="artist" data-artist="' + esc(a) + '"><span>' + esc(a) + '</span><i>' + by[a].length + '</i></button>';
+  }).join('') + '</div>';
+}
+function artistaHTML() {
+  var list = songs.filter(function (s) { return artistName(s) === LIB.artist; }).sort(byTitle);
+  return crumb(['artistas', 'Artistas'], LIB.artist, list.length) + '<div class="list">' + itemsHTML(list, false) + '</div>';
+}
+function pendientesHTML() {
+  var list = songs.filter(function (s) { return s.status !== 'revisada'; }).sort(byTitle);
+  return crumb(['home', 'Inicio'], 'Pendientes', list.length) +
+    (list.length ? '<div class="list">' + itemsHTML(list, true) + '</div>' : '<p class="hint">No tienes canciones por revisar.</p>');
+}
+function resultsHTML(q) {
+  var words = norm(q).split(/\s+/).filter(Boolean);
+  var list = songs.filter(function (s) {
+    var hay = norm(s.title + ' ' + s.artist);
+    return words.every(function (w) { return hay.indexOf(w) >= 0; });
+  }).sort(byTitle);
+  return '<div class="crumb"><button type="button" class="btn" data-lib="clear">Limpiar búsqueda</button><p class="count" id="count">' + plural(list.length, 'resultado', 'resultados') + '</p></div>' +
+    (list.length ? '<div class="list">' + itemsHTML(list, true) + '</div>' : '<p class="hint">No hay canciones que coincidan.</p>');
+}
 function fillList() {
   if (S.view !== 'library') return;
-  if (!listLoaded) { $('#count').textContent = ''; $('#list').innerHTML = '<p class="hint">Cargando biblioteca…</p>'; return; }
+  var box = $('#lib'); if (!box) return;
+  if (!listLoaded) { box.innerHTML = '<p class="hint">Cargando biblioteca…</p>'; return; }
   if (!songs.length) {
-    $('#stats').innerHTML = ''; $('#rail').innerHTML = '';
-    $('#count').textContent = '';
-    $('#list').innerHTML = editable()
+    box.innerHTML = editable()
       ? '<div class="empty"><p>La biblioteca está vacía. Agrega una canción con el botón de arriba, o carga tres canciones de ejemplo para probar la aplicación.</p>' +
         '<button class="btn" id="seed">Cargar canciones de ejemplo</button></div>'
       : '<div class="empty"><p>La biblioteca está vacía.</p></div>';
     return;
   }
-  $('#stats').innerHTML = statsHTML();
-  var q = norm(S.q).split(/\s+/).filter(Boolean);
-  var items = songs.filter(function (s) {
-    if (LIB.st !== 'todas' && (STATUS[s.status] ? s.status : 'pendiente') !== LIB.st) return false;
-    var hay = norm(s.title + ' ' + s.artist);
-    return q.every(function (w) { return hay.indexOf(w) >= 0; });
-  });
-  $('#count').textContent = items.length + (items.length === 1 ? ' canción' : ' canciones');
-  var html = '', letters = [];
-  if (!items.length) html = '<p class="hint">No hay canciones que coincidan.</p>';
-  else if (LIB.view === 'recientes') {
-    html = items.slice().sort(function (a, b) { return stamp(b.updatedAt) - stamp(a.updatedAt); }).slice(0, 40).map(function (s) {
-      return songItem(s, [s.artist, ago(stamp(s.updatedAt))].filter(Boolean).join(' · '));
-    }).join('');
-  } else if (LIB.view === 'artistas') {
-    var by = {};
-    items.forEach(function (s) { var a = (s.artist || '').trim() || 'Sin artista'; (by[a] = by[a] || []).push(s); });
-    html = Object.keys(by).sort(function (a, b) {
-      if (a === 'Sin artista') return 1; if (b === 'Sin artista') return -1;
-      return a.localeCompare(b, 'es');
-    }).map(function (a) {
-      return '<h2 class="lg">' + esc(a) + '<span>' + by[a].length + '</span></h2>' + itemsHTML(by[a].sort(byTitle), false);
-    }).join('');
-  } else {
-    items.sort(byTitle).forEach(function (s) { var L = letterOf(s.title); if (letters.indexOf(L) < 0) letters.push(L); });
-    // los grupos de versiones se arman por letra
-    var groups = {};
-    items.forEach(function (s) { var L = letterOf(s.title); (groups[L] = groups[L] || []).push(s); });
-    html = letters.map(function (L) { return '<h2 class="lg" id="g-' + (L === '#' ? 'num' : L) + '">' + L + '</h2>' + itemsHTML(groups[L], true); }).join('');
+  var page = LIB.page === 'artista' && !songs.some(function (s) { return artistName(s) === LIB.artist; }) ? 'artistas' : LIB.page;
+  box.innerHTML = S.q.trim() ? resultsHTML(S.q)
+    : page === 'todas' ? todasHTML() : page === 'artistas' ? artistasHTML() : page === 'artista' ? artistaHTML()
+    : page === 'pendientes' ? pendientesHTML() : homeHTML();
+  if (LIB.jump) {
+    var g = document.getElementById('g-' + (LIB.jump === '#' ? 'num' : LIB.jump));
+    LIB.jump = '';
+    if (g && g.scrollIntoView) g.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0);
   }
-  $('#list').innerHTML = html;
-  $('#rail').innerHTML = LIB.view === 'az' && items.length >= 24
-    ? letters.map(function (L) { return '<button type="button" data-jump="' + (L === '#' ? 'num' : L) + '" aria-label="Ir a ' + L + '">' + L + '</button>'; }).join('') : '';
 }
 
 /* ---------- Acceso ---------- */
@@ -287,7 +306,7 @@ function renderDenied() {
     '<button class="btn" id="signOut2">Salir y usar otra cuenta</button></div>';
 }
 function applyAuth(u) {
-  user = u; denied = false;
+  user = u; denied = false; LIB.page = 'home'; LIB.artist = '';
   if (unsub) { unsub(); unsub = null; }
   songs = []; listLoaded = false;
   var on = !!u;
@@ -319,6 +338,7 @@ function openSong(id) {
 }
 function showSong(song) {
   imp.cancel(); S.review = null; stopAuto(); hidePop();
+  marcarVista(song.id);
   S.view = 'song'; S.id = song.id; S.song = song; S.shift = 0; S.capo = 0; S.pos = {};
   var capoOpts = '<option value="0">Sin cejilla</option>';
   for (var i = 1; i <= 9; i++) capoOpts += '<option value="' + i + '">Traste ' + i + '</option>';
@@ -603,7 +623,16 @@ function hidePop() { clearTimeout(popT); pop.hidden = true; popFor = null; }
 function hidePopSoon() { clearTimeout(popT); popT = setTimeout(hidePop, 180); }
 
 /* ---------- Eventos ---------- */
-$('#goHome').addEventListener('click', function () { if (user && !denied) renderLibrary(); });
+$('#goHome').addEventListener('click', function () { if (denied) return; LIB.page = 'home'; LIB.artist = ''; S.q = ''; $('#q').value = ''; renderLibrary(); });
+/* Buscador de la barra superior: funciona en toda la app, menos al editar o importar */
+function searchBlocked() { return S.view === 'edit' || imp.isActive(); }
+$('#q').addEventListener('focus', function (e) { if (searchBlocked()) { e.target.blur(); toast('Guarda o cancela antes de buscar.', true); } });
+$('#q').addEventListener('input', function (e) {
+  if (searchBlocked()) { e.target.value = S.q; toast('Guarda o cancela antes de buscar.', true); return; }
+  if (denied || S.view === 'login') return;
+  S.q = e.target.value;
+  if (S.view === 'library') fillList(); else renderLibrary();
+});
 $('#newSong').addEventListener('click', function () { imp.cancel(); openEditor(null); });
 $('#signOut').addEventListener('click', function () { api.signOut(); });
 $('#signInTop').addEventListener('click', function () { api.signIn().catch(function (err) { toast('No se pudo iniciar sesión: ' + ((err && err.message) || 'error'), true); }); });
@@ -620,10 +649,18 @@ view.addEventListener('click', function (e) {
   }
   var o = t.closest('[data-open]');
   if (o) { openSong(o.getAttribute('data-open')); return; }
-  var lv = t.closest('[data-lv]');
-  if (lv) { LIB.view = lv.getAttribute('data-lv'); renderLibrary(); return; }
-  var sb = t.closest('[data-st]');
-  if (sb) { var k = sb.getAttribute('data-st'); LIB.st = LIB.st === k ? 'todas' : k; fillList(); return; }
+  var lb = t.closest('[data-lib]');
+  if (lb) {
+    var pg = lb.getAttribute('data-lib');
+    if (pg !== 'clear') LIB.page = pg;
+    LIB.artist = pg === 'artistas' || pg === 'home' || pg === 'todas' || pg === 'pendientes' ? '' : LIB.artist;
+    S.q = ''; $('#q').value = '';
+    renderLibrary(); return;
+  }
+  var ar = t.closest('[data-artist]');
+  if (ar) { LIB.page = 'artista'; LIB.artist = ar.getAttribute('data-artist'); renderLibrary(); return; }
+  var lt = t.closest('[data-letter]');
+  if (lt) { LIB.page = 'todas'; LIB.jump = lt.getAttribute('data-letter'); renderLibrary(); return; }
   var jp = t.closest('[data-jump]');
   if (jp) { var g = document.getElementById('g-' + jp.getAttribute('data-jump')); if (g) g.scrollIntoView({ block: 'start' }); return; }
   var ed = t.closest('[data-edit]');
@@ -643,8 +680,7 @@ view.addEventListener('click', function (e) {
 });
 view.addEventListener('input', function (e) {
   var id = e.target.id;
-  if (id === 'q') { S.q = e.target.value; fillList(); }
-  else if (id === 'dur') { S.dur = parseInt(e.target.value, 10); $('#durv').textContent = fmtDur(S.dur); }
+  if (id === 'dur') { S.dur = parseInt(e.target.value, 10); $('#durv').textContent = fmtDur(S.dur); }
   else if (S.view === 'edit' && /^f(Title|Artist|Key|Tuning|Status|Body)$/.test(id)) { readForm(); refreshPreview(); }
 });
 view.addEventListener('change', function (e) {

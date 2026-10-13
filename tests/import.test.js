@@ -131,6 +131,7 @@ $('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: tr
 await wait();
 const statuses = [...metas.values()].map((m) => m.status).sort();
 ok('con duda sin resolver queda "dudas"', statuses.join() === 'dudas,revisada');
+click($('[data-lib="todas"]'));
 ok('termina en la biblioteca con las dos canciones y el aviso', !!$('#q') && $$('.item').length === 2 && /2 canciones guardadas/.test($$('.toast').pop().textContent));
 ok('no queda importación activa', !$('#imStage'));
 

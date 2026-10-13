@@ -1,4 +1,4 @@
-// Biblioteca: grupos A–Z, artistas, recientes, filtros por estado y versiones agrupadas.
+// Biblioteca: portada, Todas, Artistas, Pendientes, buscador de la barra y visto recientemente.
 import { JSDOM } from 'jsdom';
 import fs from 'node:fs';
 
@@ -37,43 +37,72 @@ const click = (el) => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true
 const type = (el, v) => { el.value = v; el.dispatchEvent(new w.Event('input', { bubbles: true })); };
 
 start(api); await wait();
+w.Element.prototype.scrollIntoView = function () { w.__scrolledTo = this.id; };
 
-const stats = () => $$('.stb').map((b) => b.textContent.replace(/\s+/g, ' ').trim());
-ok('contador de estado', stats()[0] === '30 en total' && stats()[1] === '2 revisadas' && stats()[2] === '1 con dudas' && stats()[3] === '27 pendientes');
-ok('barra de avance dibujada', $$('.prog i').length === 2);
-ok('vista A–Z por defecto con letras', $('.tab-b[aria-selected="true"]').textContent === 'A–Z' && $$('h2.lg').length >= 4);
+// ---- portada ----
+ok('la portada ofrece los tres accesos con su cifra', /30 canciones/.test($('[data-lib="todas"]').textContent) && /Artistas/.test($('[data-lib="artistas"]').textContent) && /28 por revisar/.test($('[data-lib="pendientes"]').textContent));
+ok('la portada no muestra avance ni conteos de revisadas o dudas', !$('.prog') && !/revisadas|con dudas/.test($('#lib').textContent));
+ok('la portada no lista canciones', $$('.item').length === 0);
+ok('sin historial no hay "Visto recientemente"', !$('.vstrip'));
+ok('fila de letras con las que existen activas', $$('.az').length === 27 && !$('[data-letter="Z"]').disabled && !$('[data-letter="K"]').disabled === false && $('[data-letter="Q"]').disabled === false);
+
+// ---- letras ----
+click($('[data-letter="Z"]'));
+ok('una letra abre Todas y salta a ella', !!$('h2.lg#g-Z') && w.__scrolledTo === 'g-Z');
+
+// ---- Todas ----
+ok('Todas con letras, cuenta y versiones agrupadas', /Todas30/.test($('.crumb h1').textContent) && $$('.item').length === 30 && $$('h2.lg').length >= 4 && $('.vgroup .vg-l').textContent === '2 versiones' && $$('.vgroup .item').length === 2);
 ok('"¿Quién fue?" cae en la Q y no en #', $$('h2.lg').some((h) => h.textContent === 'Q') && !$$('h2.lg').some((h) => h.textContent === '#'));
-ok('las dos versiones de Ojalá van en un marco', $$('.vgroup').length === 1 && $('.vgroup .vg-l').textContent === '2 versiones' && $$('.vgroup .item').length === 2);
-ok('con 24 o más canciones hay índice de letras', $$('#rail [data-jump]').length >= 4);
-ok('el índice salta a la letra', (() => { let hit = false; const g = d.getElementById('g-Z'); g.scrollIntoView = () => { hit = true; }; click($('#rail [data-jump="Z"]')); return hit; })());
+ok('con 24 o más canciones hay índice lateral', $$('.rail [data-jump]').length >= 4);
+ok('el índice lateral salta a la letra', (() => { click($('.rail [data-jump="A"]')); return w.__scrolledTo === 'g-A'; })());
+ok('Todas muestra el estado de cada canción', $$('.item').some((i) => /Con dudas/.test(i.textContent)));
 
-click($('[data-st="dudas"]'));
-ok('filtrar por con dudas', $$('.item').length === 1 && /Ojalá/.test($('.item').textContent) && $('#count').textContent === '1 canción');
-click($('[data-st="dudas"]'));
-ok('tocar otra vez quita el filtro', $$('.item').length === 30);
-click($('[data-st="revisada"]'));
-ok('filtrar por revisadas', $$('.item').length === 2);
-click($('[data-st="todas"]'));
-
-type($('#q'), 'silvio ojala');
-ok('búsqueda por varias palabras sin tildes', $$('.item').length === 2);
-type($('#q'), 'sabina'); ok('búsqueda por artista', $$('.item').length === 1 && /Zapatos/.test($('.item').textContent));
-type($('#q'), '');
-
-click($('[data-lv="artistas"]'));
-const heads = $$('h2.lg').map((h) => h.textContent);
-ok('vista por artistas con conteo', heads.includes('Silvio Rodríguez3') && heads.includes('Joaquín Sabina1') && heads[heads.length - 1] === 'Sin artista1');
-ok('sin índice de letras en artistas', $$('#rail [data-jump]').length === 0);
-
-click($('[data-lv="recientes"]'));
-const first = $$('.item')[0];
-ok('recientes: la más nueva primero con su hora', /Años/.test(first.textContent) && /hace 5 min/.test(first.textContent));
-ok('recientes: máximo 40', $$('.item').length <= 40);
-ok('recientes: ayer y días', $$('.item').some((i) => /hace 3 días/.test(i.textContent)));
-
-click($('[data-lv="az"]'));
+// ---- visto recientemente ----
 click($$('.item').find((i) => /Zapatos/.test(i.textContent))); await wait();
-ok('abrir una canción desde la lista', !!$('#songBody'));
+ok('abrir una canción', !!$('#songBody'));
+click($('#goHome'));
+ok('el logo vuelve a la portada', !!$('[data-lib="todas"]') && $$('.item').length === 0);
+ok('la portada muestra lo visto recientemente', $$('.vcard').length === 1 && /Zapatos/.test($('.vcard').textContent));
+click($$('.item, .vcard')[0]); await wait();
+click($('[data-act="back"]')); click($('#goHome'));
+click($('[data-lib="todas"]'));
+click($$('.item').find((i) => /Ojalá/.test(i.textContent))); await wait();
+click($('#goHome'));
+ok('lo último que abres va primero y sin repetir', $$('.vcard').length === 2 && /Ojalá/.test($$('.vcard')[0].textContent) && /Zapatos/.test($$('.vcard')[1].textContent));
+click($('.vcard')); await wait();
+ok('tocar una tarjeta abre la canción', !!$('#songBody'));
+
+// ---- buscador de la barra ----
+type($('#q'), 'silvio ojala');
+ok('buscar desde una canción muestra resultados', !$('#songBody') && $$('.item').length === 2 && /2 resultados/.test($('#count').textContent));
+type($('#q'), 'sabina');
+ok('búsqueda por artista', $$('.item').length === 1 && /Zapatos/.test($('.item').textContent));
+type($('#q'), 'zzzz');
+ok('sin coincidencias lo dice', /No hay canciones que coincidan/.test($('#lib').textContent));
+click($('[data-lib="clear"]'));
+ok('limpiar la búsqueda vacía el cuadro y vuelve a la página', $('#q').value === '' && !!$('[data-lib="todas"]'));
+
+// ---- Artistas ----
+click($('[data-lib="artistas"]'));
+const names = $$('.artist').map((a) => a.textContent.replace(/\s+/g, ' ').trim());
+ok('directorio de artistas con su conteo y "Sin artista" al final', names.includes('Silvio Rodríguez3') && names.includes('Joaquín Sabina1') && names[names.length - 1] === 'Sin artista1');
+ok('el directorio no lista canciones', $$('.item').length === 0);
+click($$('.artist').find((a) => /Silvio/.test(a.textContent)));
+ok('un artista muestra sus canciones', $$('.item').length === 3 && /Silvio Rodríguez3/.test($('.crumb h1').textContent));
+ok('las dos versiones de Ojalá se agrupan', $$('.vgroup .item').length === 2);
+click($('[data-lib="artistas"]'));
+ok('volver regresa al directorio', $$('.artist').length > 3);
+
+// ---- Pendientes ----
+click($('[data-lib="home"]'));
+click($('[data-lib="pendientes"]'));
+ok('Pendientes: todo lo que no está revisado', $$('.item').length === 28 && !$$('.item').some((i) => /Revisada/.test(i.textContent)) && $$('.item').some((i) => /Con dudas/.test(i.textContent)));
+
+// ---- editar bloquea el buscador ----
+click($$('.item')[0]); await wait();
+click($('[data-act="edit"]'));
+type($('#q'), 'algo');
+ok('al editar el buscador no actúa', !!$('#fBody') && $('#q').value === '' && !!$('.toast.err'));
 
 console.log(fails.length ? '\nFALLARON:\n' + fails.join('\n') : '\nsin errores');
 process.exitCode = fails.length ? 1 : 0;

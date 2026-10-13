@@ -58,6 +58,9 @@ click($('#signInTop')); await wait();
 ok('con sesión muestra la biblioteca y el correo', !!$('#q') && $('#who').textContent === 'yo@example.test' && $('#newSong').hidden === false);
 ok('biblioteca vacía ofrece cargar ejemplos', !!$('#seed'));
 click($('#seed')); await wait();
+ok('la portada ofrece Todas, Artistas y Pendientes con sus cifras', /3 canciones/.test($('[data-lib="todas"]').textContent) && /Artistas/.test($('[data-lib="artistas"]').textContent) && /2 por revisar/.test($('[data-lib="pendientes"]').textContent));
+ok('la portada no lista canciones', $$('.item').length === 0);
+click($('[data-lib="todas"]'));
 ok('biblioteca con 3 canciones', $$('.item').length === 3);
 ok('el cuerpo se guarda aparte de los datos livianos', api.metas.get('ej1').body === undefined && /Camino|Cuando/.test(api.bodies.get('ej1').body));
 ok('las dudas se muestran desde los datos livianos', /dudas/.test($$('.item').find((i) => /Luz de enero/.test(i.textContent)).textContent));
@@ -66,6 +69,7 @@ ok('las dudas se muestran desde los datos livianos', /dudas/.test($$('.item').fi
 const q = $('#q'); type(q, 'camino');
 ok('búsqueda sin tildes filtra', $$('.item').length === 1);
 type(q, '');
+ok('al vaciar la búsqueda vuelve a la lista', $$('.item').length === 3);
 
 // ---- vista de canción ----
 click($$('.item').find((i) => /Camino/.test(i.textContent))); await wait();
@@ -132,7 +136,7 @@ ok('se escribió cuerpo y conteo de dudas', /Hola/.test(api.bodies.get('ej2').bo
 click($('[data-act="back"]'));
 
 // ---- diagrama emergente ----
-click($('#goHome'));
+click($('#goHome')); click($('[data-lib="todas"]'));
 click($$('.item').find((i) => /Camino/.test(i.textContent))); await wait();
 const pop = $('#pop');
 const chEl = (t) => $$('#songBody [data-ch]').find((x) => x.textContent === t);
@@ -185,13 +189,16 @@ click($('#goHome'));
 click($('#newSong'));
 ok('nueva canción abre editor', /Nueva canción/.test($('h1').textContent));
 click($('#edCancel'));
-ok('cancelar vuelve a la biblioteca', $$('.item').length === 3);
+ok('cancelar vuelve a la biblioteca', !!$('[data-lib="todas"]'));
+click($('[data-lib="todas"]'));
+ok('la lista sigue con 3 canciones', $$('.item').length === 3);
 click($$('.item')[0]); await wait(); click($('[data-act="edit"]'));
 click($('#edDel')); ok('primer clic pide confirmar', /Confirmar/.test($('#edDel').textContent));
 click($('#edDel')); ok('segundo clic elimina', $$('.item').length === 2 && api.metas.size === 2 && api.bodies.size === 2);
 
 // ---- salir: de vuelta al modo invitado ----
 click($('#signOut')); await wait();
+click($('[data-lib="todas"]'));
 ok('salir deja la biblioteca visible y oculta los controles', !!$('#q') && $$('.item').length === 2 && $('#newSong').hidden === true && $('#who').hidden === true && $('#signInTop').hidden === false);
 click($$('.item').find((i) => /Luz de enero/.test(i.textContent))); await wait();
 ok('invitado abre la canción y no ve Editar', !!$('#songBody') && !$('[data-act="edit"]') && !!$('[data-act="export"]'));
