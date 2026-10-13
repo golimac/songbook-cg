@@ -144,23 +144,23 @@
   .songgrid { @apply grid gap-x-10; grid-template-columns: minmax(0, 1fr); }
   .songgrid > .dgs::before { content: 'Acordes'; @apply w-full font-display font-semibold text-lg text-ink mb-1; grid-column: 1 / -1; }
   @media (min-width: 768px) and (max-width: 959px) {
-    .songgrid { grid-template-columns: minmax(0, 1fr) 236px; column-gap: 24px; align-items: start; }
+    .songgrid { grid-template-columns: minmax(0, 1fr) 252px; column-gap: 24px; align-items: start; }
     .songgrid:has(#dgStrip[hidden]) { grid-template-columns: minmax(0, 1fr); }
-    .songgrid > .dgs { @apply content-start my-2 pl-5 border-l border-rule; display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; justify-content: start; grid-column: 2; grid-row: 1; align-self: start; }
+    .songgrid > .dgs { @apply content-start my-2 pl-5 border-l border-rule; display: grid; grid-template-columns: repeat(3, 72px); gap: 8px; justify-content: start; grid-column: 2; grid-row: 1; align-self: start; }
     .songgrid > .dgs.fit { @apply sticky; }
-    .songgrid > .dgs .dg { @apply w-16 text-[11px] rounded-lg px-0; }
-    .songgrid > .dgs .dg svg { @apply w-[58px]; }
-    .songgrid > .dgs .dg b { @apply text-xs; }
+    .songgrid > .dgs .dg { @apply w-[72px] text-[11px] rounded-lg px-0; }
+    .songgrid > .dgs .dg svg { @apply w-[65px]; }
+    .songgrid > .dgs .dg b { @apply text-[13px]; }
     .songgrid > .song { grid-column: 1; grid-row: 1; }
   }
   @media (min-width: 960px) {
-    .songgrid { grid-template-columns: minmax(0, 660px) 300px; align-items: start; justify-content: start; }
+    .songgrid { grid-template-columns: minmax(0, 650px) 344px; align-items: start; justify-content: start; }
     .songgrid:has(#dgStrip[hidden]) { grid-template-columns: minmax(0, 880px); }
-    .songgrid > .dgs { @apply content-start my-2 pl-8 border-l border-rule; display: grid; grid-template-columns: repeat(4, 64px); gap: 8px; justify-content: start; grid-column: 2; grid-row: 1; align-self: start; }
+    .songgrid > .dgs { @apply content-start my-2 pl-8 border-l border-rule; display: grid; grid-template-columns: repeat(4, 72px); gap: 8px; justify-content: start; grid-column: 2; grid-row: 1; align-self: start; }
     .songgrid > .dgs.fit { @apply sticky; }
-    .songgrid > .dgs .dg { @apply w-16 text-[11px] rounded-lg px-0; }
-    .songgrid > .dgs .dg svg { @apply w-[58px]; }
-    .songgrid > .dgs .dg b { @apply text-xs; }
+    .songgrid > .dgs .dg { @apply w-[72px] text-[11px] rounded-lg px-0; }
+    .songgrid > .dgs .dg svg { @apply w-[65px]; }
+    .songgrid > .dgs .dg b { @apply text-[13px]; }
     .songgrid > .song { grid-column: 1; grid-row: 1; }
   }
 
