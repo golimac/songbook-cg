@@ -229,34 +229,24 @@ function shapesFor(c) {
       mov.push({ frets: frets, base: f > 1 ? f : 1, barre: kind === 'D' ? null : { fret: f, from: kind === 'E' ? 0 : 1, to: 5 } });
     });
   }
-  if (q === 'dim7' || q === '°7') {
-    for (var k = mod12(pc - 9) % 3; k <= 14; k += 3) {
-      if (k < 2) continue;
-      mov.push({ frets: [-1, k, k + 1, k - 1, k + 1, -1], base: k - 1 > 1 ? k - 1 : 1, barre: null });
-    }
-    /* Raíz en la cuerda 6 y en la cuerda 4. La forma se repite cada tres trastes porque el disminuido es simétrico. */
-    [[4, [0, null, -1, 0, -1, null]], [2, [null, null, 0, 1, 0, 1]]].forEach(function (sh) {
-      for (var r = mod12(pc - sh[0]) % 3; r <= 14; r += 3) {
-        if (sh[1].some(function (o) { return o !== null && r + o < 1 && !(sh[0] === 2 && r + o === 0); })) continue;
-        var fr = sh[1].map(function (o) { return o === null ? -1 : r + o; });
-        var pl = fr.filter(function (f) { return f > 0; });
+  if (q === 'dim7' || q === '°7' || q === 'm7b5') {
+    /* Una posición por familia (raíz en cuerda 6, 5 o 4), la más cercana a trastes 2, 6 y 9.
+       null = cuerda muda; el resto es traste relativo a la raíz. */
+    var fam = q === 'm7b5'
+      ? [[9, 2, [null, 0, 1, 0, 1, null]], [4, 6, [0, null, 0, 0, -1, null]], [2, 9, [null, null, 0, 1, 1, 1]]]
+      : [[9, 2, [null, 0, 1, -1, 1, null]], [4, 6, [0, null, -1, 0, -1, null]], [2, 9, [null, null, 0, 1, 0, 1]]];
+    var step = q === 'm7b5' ? 12 : 3;
+    fam.forEach(function (f) {
+      var best = null;
+      for (var r = mod12(pc - f[0]) % step; r <= 26; r += step) {
+        if (f[2].some(function (o) { return o !== null && r + o < 0; })) continue;
+        var fr = f[2].map(function (o) { return o === null ? -1 : r + o; });
         if (Math.max.apply(null, fr) > 15) continue;
+        var pl = fr.filter(function (x) { return x > 0; });
         var mn = Math.min.apply(null, pl);
-        mov.push({ frets: fr, base: mn > 1 ? mn : 1, barre: null });
+        if (!best || Math.abs(mn - f[1]) < Math.abs(best.mn - f[1])) best = { frets: fr, mn: mn };
       }
-    });
-  } else if (q === 'm7b5') {
-    /* Semidisminuido: raíz en la cuerda 6, 5 o 4. null = cuerda muda; el resto es traste relativo a la raíz. */
-    [[4, [0, null, 0, 0, -1, null]], [9, [null, 0, 1, 0, 1, null]], [2, [null, null, 0, 1, 1, 1]]].forEach(function (sh) {
-      [mod12(pc - sh[0]), mod12(pc - sh[0]) + 12].forEach(function (r) {
-        if (sh[1].some(function (o) { return o !== null && r + o < 0; })) return;
-        var frets = sh[1].map(function (o) { return o === null ? -1 : r + o; });
-        var played = frets.filter(function (f) { return f >= 0; });
-        if (Math.min.apply(null, played) < 0 || Math.max.apply(null, played) > 15) return;
-        var low = played.filter(function (f) { return f > 0; });
-        var mn = low.length ? Math.min.apply(null, low) : 1;
-        mov.push({ frets: frets, base: mn > 1 ? mn : 1, barre: null });
-      });
+      if (best) mov.push({ frets: best.frets, base: best.mn > 1 ? best.mn : 1, barre: null });
     });
   } else {
     if (MOV_E[q]) push(MOV_E[q], mod12(pc - 4), 'E');
