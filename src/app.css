@@ -125,9 +125,9 @@
 
   /* Diagramas de acordes */
   .dgs { @apply flex flex-wrap gap-2 my-3; }
-  .dg { @apply w-[76px] text-center text-xs border border-rule rounded-xl bg-card text-ink pt-1.5 pb-1 px-0.5 transition-colors; }
+  .dg { @apply w-[88px] text-center text-xs border border-rule rounded-xl bg-card text-ink pt-1.5 pb-1 px-0.5 transition-colors; }
   button.dg:hover { @apply border-spruce; }
-  .dg svg { @apply block mx-auto; }
+  .dg svg { @apply block mx-auto max-w-full h-auto; }
   .dg b { @apply block font-mono text-[13px]; }
   .dg i { @apply block not-italic text-[11px] text-mute; }
   .dg.none { @apply border-dashed text-mute; }
