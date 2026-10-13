@@ -334,10 +334,11 @@ function openEditor(id, review) {
       (review.remarks ? '<p class="revrem"><b>Del papel:</b> ' + esc(review.remarks) + '</p>' : '') +
       '<div class="revimg" id="revImg">' + review.crops.map(function (c) { return '<img src="' + esc(c) + '" alt="Foto de la canción">'; }).join('') + '</div></aside>' : '') +
     '<form class="form" id="edForm" autocomplete="off">' +
-      '<div class="row"><label class="f">Título<input type="text" id="fTitle"></label><label class="f">Artista<input type="text" id="fArtist"></label></div>' +
-      '<div class="row"><label class="f">Tonalidad<input type="text" id="fKey" placeholder="Am, G, Bb"></label>' +
-        '<label class="f">Afinación o cejilla de la fuente<input type="text" id="fTuning"></label>' +
+      '<label class="f">Título<input type="text" id="fTitle"></label>' +
+      '<div class="row3"><label class="f">Artista<input type="text" id="fArtist"></label>' +
+        '<label class="f">Tonalidad<input type="text" id="fKey" placeholder="Am, G, Bb"></label>' +
         '<label class="f">Estado<select id="fStatus">' + stOpts + '</select></label></div>' +
+      '<label class="f">Afinación o cejilla de la fuente<textarea id="fTuning" rows="2" spellcheck="false"></textarea></label>' +
       '<label class="f">Letra y acordes<textarea id="fBody" spellcheck="false"></textarea></label>' +
       '<details class="syntax"><summary>Cómo se escribe</summary><ul>' +
         '<li><code>[Am]</code> pone el acorde sobre la sílaba que sigue.</li>' +

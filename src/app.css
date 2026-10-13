@@ -164,9 +164,11 @@
   @media (min-width: 900px) { .ed { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
   .form { @apply grid content-start gap-4 bg-card border border-rule rounded-2xl p-5; }
   .row { @apply grid gap-3; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .row3 { @apply grid gap-3 grid-cols-1 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]; }
   .f { @apply flex flex-col gap-1 text-xs font-medium text-mute min-w-0; }
   .f input, .f select { @apply text-sm; }
-  .f textarea { @apply text-sm; }
+  .f textarea { @apply text-sm leading-snug resize-y; }
+  #fTuning { @apply min-h-14; }
   #fBody { @apply font-mono text-[13px] leading-relaxed min-h-72 whitespace-pre overflow-auto resize-y; tab-size: 2; height: clamp(260px, 38vh, 420px); }
   .syntax { @apply text-[13px] text-mute border border-rule rounded-lg bg-paper px-3 py-2; }
   .syntax summary { @apply cursor-pointer text-ink font-medium; }
