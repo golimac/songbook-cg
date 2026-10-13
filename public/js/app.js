@@ -260,7 +260,7 @@ function showSong(song) {
       '<div class="grp"><label class="chk"><input type="checkbox" id="dgToggle"' + (S.dg ? ' checked' : '') + '> Diagramas</label></div>' +
       '<div class="grp"><button class="btn" data-act="auto" id="autoBtn">Iniciar autoscroll</button><input type="range" id="dur" min="30" max="420" step="10" value="' + S.dur + '" aria-label="Duración del autoscroll"><output id="durv"></output></div>' +
     '</div>' +
-    '<div id="info"></div><div class="dgs" id="dgStrip"></div><article class="song" id="songBody"></article>';
+    '<div id="info"></div><div class="songgrid"><div class="dgs" id="dgStrip"></div><article class="song" id="songBody"></article></div>';
   refreshSong();
   window.scrollTo(0, 0);
 }

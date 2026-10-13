@@ -140,6 +140,15 @@
   .cell { fill: transparent; cursor: pointer; }
   .cell:hover { fill: var(--accent); fill-opacity: .18; }
 
+  /* Canción: la letra a la izquierda y los diagramas en una columna fija a la derecha */
+  .songgrid { @apply grid gap-x-8; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 960px) {
+    .songgrid { grid-template-columns: minmax(0, 1fr) 280px; align-items: start; }
+    .songgrid:has(#dgStrip[hidden]) { grid-template-columns: minmax(0, 1fr); }
+    .songgrid > .dgs { @apply sticky content-start overflow-auto my-2 pb-2; grid-column: 2; grid-row: 1; top: calc(var(--hh) + 96px); max-height: calc(100vh - var(--hh) - 112px); display: grid; grid-template-columns: repeat(3, 88px); gap: 8px; justify-content: start; }
+    .songgrid > .song { grid-column: 1; grid-row: 1; }
+  }
+
   /* Letra con acordes */
   .song { @apply font-mono mt-2; font-size: var(--fs, 13px); line-height: 1.35; }
   .ln { @apply flex flex-wrap items-end mt-[.5em]; }
