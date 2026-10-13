@@ -168,7 +168,7 @@ function stripHTML(song, ctx) {
 /* ---------- Biblioteca ---------- */
 var STATUS = { pendiente: ['Pendiente', ''], dudas: ['Con dudas', 'warn'], revisada: ['Revisada', 'ok'] };
 /* La portada reúne los accesos; la lista completa vive solo en "Todas". */
-var LIB = { page: 'home', artist: '', jump: '' };
+var LIB = { page: 'home', artist: '', jump: '' }; /* home | nuevas | todas | artistas | artista | pendientes */
 var RV_KEY = 'songbookcg.vistas';
 function vistas() { try { return JSON.parse(window.localStorage.getItem(RV_KEY) || '[]'); } catch (e) { return []; } }
 function marcarVista(id) {
@@ -213,26 +213,78 @@ function crumb(back, title, count) {
 }
 var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
 
+/* Marca de tiempo en milisegundos; null significa que el servidor aún la está escribiendo (recién creada). */
+function stamp(s) {
+  var v = s.createdAt != null ? s.createdAt : s.updatedAt;
+  if (v == null) return s.createdAt === null ? Date.now() : 0;
+  return typeof v.toMillis === 'function' ? v.toMillis() : Number(v) || 0;
+}
+function ago(ms) {
+  if (!ms) return '';
+  var m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (m < 1) return 'ahora';
+  if (m < 60) return 'hace ' + m + ' min';
+  var h = Math.round(m / 60); if (h < 24) return 'hace ' + h + ' h';
+  var d = Math.round(h / 24); if (d < 31) return 'hace ' + d + (d === 1 ? ' día' : ' días');
+  var mo = Math.round(d / 30); return mo < 12 ? 'hace ' + mo + (mo === 1 ? ' mes' : ' meses') : 'hace más de un año';
+}
+function avatar(name) {
+  var h = 0, t = String(name || '?'); for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 360;
+  var c = norm(t).replace(/[^a-z0-9]/g, '').charAt(0).toUpperCase() || '♪';
+  return '<span class="av" style="--h:' + h + '" aria-hidden="true">' + c + '</span>';
+}
+var HOME_N = 7;
+function miniSong(s, meta) {
+  return '<button type="button" class="mini" data-open="' + esc(s.id) + '">' + avatar(s.artist || s.title) +
+    '<span class="mi-t"><b>' + esc(s.title) + '</b><i>' + esc(s.artist || 'Sin artista') + '</i></span>' +
+    '<span class="mi-m">' + esc(meta || '') + '</span></button>';
+}
+function homeBox(cls, title, count, icon, rows, more, empty) {
+  return '<section class="box ' + cls + '"><header><span class="bx-i" aria-hidden="true">' + icon + '</span><h2>' + title + '</h2><span class="bx-n">' + count + '</span></header>' +
+    '<div class="bx-l">' + (rows || '<p class="bx-e">' + empty + '</p>') + '</div>' +
+    (more ? '<button type="button" class="more" data-lib="' + more + '">Ver más <span aria-hidden="true">→</span></button>' : '') + '</section>';
+}
+var IC = {
+  new: '<svg viewBox="0 0 24 24"><path d="M12 3l2.1 5.4L20 9l-4.4 3.8L17 19l-5-3-5 3 1.4-6.2L4 9l5.9-.6z"/></svg>',
+  todas: '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
+  art: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6"/></svg>',
+  pend: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8.5 9h7M8.5 13h7M8.5 17h4"/></svg>',
+  seen: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'
+};
 function homeHTML() {
   var byId = {}; songs.forEach(function (s) { byId[s.id] = s; });
   var seen = vistas().map(function (id) { return byId[id]; }).filter(Boolean).slice(0, 8);
   var have = {}; songs.forEach(function (s) { have[letterOf(s.title)] = 1; });
-  var artists = {}; songs.forEach(function (s) { artists[norm(artistName(s))] = 1; });
-  var pend = songs.filter(function (s) { return s.status !== 'revisada'; }).length;
-  return (seen.length
-    ? '<h2 class="hh">Visto recientemente</h2><div class="vstrip">' + seen.map(function (s) {
-        return '<button class="vcard" data-open="' + esc(s.id) + '"><span class="it-title">' + esc(s.title) + '</span>' +
-          '<span class="vc-sub">' + esc(s.artist || '') + '</span>' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') + '</button>';
-      }).join('') + '</div>' : '') +
-    '<h2 class="hh">Explorar</h2>' +
+  var by = {}; songs.forEach(function (s) { var a = artistName(s); (by[a] = by[a] || []).push(s); });
+  var names = Object.keys(by);
+  var pendList = songs.filter(function (s) { return s.status !== 'revisada'; }).sort(byTitle);
+  var nuevas = songs.slice().sort(function (a, b) { return stamp(b) - stamp(a) || byTitle(a, b); });
+  var top = names.filter(function (a) { return a !== 'Sin artista'; }).sort(function (a, b) { return by[b].length - by[a].length || a.localeCompare(b, 'es'); }).concat(by['Sin artista'] ? ['Sin artista'] : []);
+  return '<section class="hero"><div class="hero-t"><h1>Tu cancionero</h1><p>' + plural(songs.length, 'canción', 'canciones') + ' · ' + plural(names.length, 'artista', 'artistas') + '</p></div>' +
+      '<svg class="hero-fb" viewBox="0 0 320 90" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">' +
+      [0, 1, 2, 3, 4, 5].map(function (i) { return '<line x1="0" x2="320" y1="' + (10 + i * 14) + '" y2="' + (10 + i * 14) + '" stroke-width="' + (0.8 + i * 0.35) + '"/>'; }).join('') +
+      [40, 100, 155, 205, 250, 292].map(function (x) { return '<line class="fr" x1="' + x + '" x2="' + x + '" y1="10" y2="80"/>'; }).join('') +
+      '<circle cx="127" cy="31" r="5"/><circle cx="180" cy="59" r="5"/><circle cx="228" cy="45" r="5"/><circle cx="73" cy="17" r="5"/></svg></section>' +
     '<div class="azrow" role="group" aria-label="Ir a la letra">' + LETTERS.map(function (L) {
       return '<button type="button" class="az" data-letter="' + L + '"' + (have[L] ? '' : ' disabled') + '>' + L + '</button>';
     }).join('') + '</div>' +
-    '<div class="expl">' +
-      '<button type="button" class="bigb" data-lib="todas"><b>Todas</b><span>' + plural(songs.length, 'canción', 'canciones') + '</span></button>' +
-      '<button type="button" class="bigb" data-lib="artistas"><b>Artistas</b><span>' + plural(Object.keys(artists).length, 'artista', 'artistas') + '</span></button>' +
-      '<button type="button" class="bigb" data-lib="pendientes"><b>Pendientes</b><span>' + pend + ' por revisar</span></button>' +
+    '<section class="box seenbox"><header><span class="bx-i" aria-hidden="true">' + IC.seen + '</span><h2>Visto recientemente</h2></header>' +
+      (seen.length ? '<div class="vstrip">' + seen.map(function (s) {
+        return '<button class="vcard" data-open="' + esc(s.id) + '">' + avatar(s.artist || s.title) + '<span class="it-title">' + esc(s.title) + '</span>' +
+          '<span class="vc-sub">' + esc(s.artist || '') + '</span>' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') + '</button>';
+      }).join('') + '</div>' : '<p class="bx-e">Aquí quedan las últimas canciones que abras en este dispositivo.</p>') + '</section>' +
+    '<div class="boxes">' +
+      homeBox('b-new', 'Nuevas', '', IC.new, nuevas.slice(0, HOME_N).map(function (s) { return miniSong(s, ago(stamp(s))); }).join(''), 'nuevas', '') +
+      homeBox('b-pend', 'Pendientes', pendList.length + ' por revisar', IC.pend, pendList.slice(0, HOME_N).map(function (s) { return miniSong(s, parseKey(s.key) ? s.key : ''); }).join(''), pendList.length > HOME_N ? 'pendientes' : '', 'Todo revisado. Buen trabajo.') +
+      homeBox('b-todas', 'Todas', plural(songs.length, 'canción', 'canciones'), IC.todas, songs.slice().sort(byTitle).slice(0, HOME_N).map(function (s) { return miniSong(s, parseKey(s.key) ? s.key : ''); }).join(''), 'todas', '') +
+      homeBox('b-art', 'Artistas', plural(names.length, 'artista', 'artistas'), IC.art, top.slice(0, HOME_N).map(function (a) {
+        return '<button type="button" class="mini" data-artist="' + esc(a) + '">' + avatar(a) + '<span class="mi-t"><b>' + esc(a) + '</b></span><span class="mi-m">' + plural(by[a].length, 'canción', 'canciones') + '</span></button>';
+      }).join(''), 'artistas', '') +
     '</div>';
+}
+function nuevasHTML() {
+  var list = songs.slice().sort(function (a, b) { return stamp(b) - stamp(a) || byTitle(a, b); });
+  return crumb(['home', 'Inicio'], 'Nuevas', list.length) + '<div class="list">' + list.map(function (s) { return songItem(s, s.artist); }).join('') + '</div>';
 }
 function todasHTML() {
   var items = songs.slice().sort(byTitle), groups = {}, letters = [];
@@ -285,7 +337,7 @@ function fillList() {
   var page = LIB.page === 'artista' && !songs.some(function (s) { return artistName(s) === LIB.artist; }) ? 'artistas' : LIB.page;
   box.innerHTML = S.q.trim() ? resultsHTML(S.q)
     : page === 'todas' ? todasHTML() : page === 'artistas' ? artistasHTML() : page === 'artista' ? artistaHTML()
-    : page === 'pendientes' ? pendientesHTML() : homeHTML();
+    : page === 'pendientes' ? pendientesHTML() : page === 'nuevas' ? nuevasHTML() : homeHTML();
   if (LIB.jump) {
     var g = document.getElementById('g-' + (LIB.jump === '#' ? 'num' : LIB.jump));
     LIB.jump = '';
@@ -622,6 +674,24 @@ function showPop(el) {
 function hidePop() { clearTimeout(popT); pop.hidden = true; popFor = null; }
 function hidePopSoon() { clearTimeout(popT); popT = setTimeout(hidePop, 180); }
 
+/* ---------- Tema claro / oscuro ---------- */
+var TH_KEY = 'songbookcg.tema';
+function temaActual() {
+  var t = null; try { t = window.localStorage.getItem(TH_KEY); } catch (e) { /* sin almacenamiento */ }
+  if (t === 'light' || t === 'dark') return t;
+  try { return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { return 'light'; }
+}
+function aplicarTema(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  var b = $('#theme'); if (b) { b.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false'); b.setAttribute('aria-label', t === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'); }
+}
+aplicarTema(temaActual());
+$('#theme').addEventListener('click', function () {
+  var t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  try { window.localStorage.setItem(TH_KEY, t); } catch (e) { /* sin almacenamiento */ }
+  aplicarTema(t);
+});
+
 /* ---------- Eventos ---------- */
 $('#goHome').addEventListener('click', function () { if (denied) return; LIB.page = 'home'; LIB.artist = ''; S.q = ''; $('#q').value = ''; renderLibrary(); });
 /* Buscador de la barra superior: funciona en toda la app, menos al editar o importar */
@@ -653,7 +723,7 @@ view.addEventListener('click', function (e) {
   if (lb) {
     var pg = lb.getAttribute('data-lib');
     if (pg !== 'clear') LIB.page = pg;
-    LIB.artist = pg === 'artistas' || pg === 'home' || pg === 'todas' || pg === 'pendientes' ? '' : LIB.artist;
+    LIB.artist = pg === 'artista' ? LIB.artist : '';
     S.q = ''; $('#q').value = '';
     renderLibrary(); return;
   }

@@ -58,7 +58,7 @@ click($('#signInTop')); await wait();
 ok('con sesión muestra la biblioteca y el correo', !!$('#q') && $('#who').textContent === 'yo@example.test' && $('#newSong').hidden === false);
 ok('biblioteca vacía ofrece cargar ejemplos', !!$('#seed'));
 click($('#seed')); await wait();
-ok('la portada ofrece Todas, Artistas y Pendientes con sus cifras', /3 canciones/.test($('[data-lib="todas"]').textContent) && /Artistas/.test($('[data-lib="artistas"]').textContent) && /2 por revisar/.test($('[data-lib="pendientes"]').textContent));
+ok('la portada resume 3 canciones y 2 por revisar, con accesos', /3 canciones/.test($('.hero').textContent) && /2 por revisar/.test($('.b-pend header').textContent) && !!$('[data-lib="todas"]') && !!$('[data-lib="artistas"]'));
 ok('la portada no lista canciones', $$('.item').length === 0);
 click($('[data-lib="todas"]'));
 ok('biblioteca con 3 canciones', $$('.item').length === 3);

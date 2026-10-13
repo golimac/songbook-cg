@@ -5,6 +5,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Songbook CG</title>
+<script>try{var t=localStorage.getItem('songbookcg.tema');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=Fira+Code:wght@400;600&display=swap">
@@ -15,6 +16,10 @@
   <button class="logo" id="goHome" aria-label="Ir a la biblioteca">SONGBOOK CG</button>
   <input id="q" class="hq" type="search" placeholder="Buscar título o artista" autocomplete="off" aria-label="Buscar canciones">
   <span class="sp"></span>
+  <button class="btn sq tg" id="theme" type="button" aria-label="Cambiar a modo oscuro" aria-pressed="false" title="Modo claro / oscuro">
+    <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+  </button>
   <span class="who" id="who" hidden></span>
   <button class="btn" id="signInTop" hidden>Entrar</button>
   <button class="btn" id="signOut" hidden>Salir</button>
@@ -22,6 +27,7 @@
   <button class="btn primary" id="newSong" hidden>Nueva canción</button>
 </div></header>
 <main><div class="wrap" id="view"></div></main>
+<footer class="sfoot"><div class="wrap"><span class="sf-logo">SONGBOOK CG</span><span>Treinta años de papel, por fin con respaldo.</span><span class="sf-r">Hecho en El Retiro, Antioquia</span></div></footer>
 
 <div class="pop" id="pop" hidden></div>
 

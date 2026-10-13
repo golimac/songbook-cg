@@ -40,10 +40,21 @@ start(api); await wait();
 w.Element.prototype.scrollIntoView = function () { w.__scrolledTo = this.id; };
 
 // ---- portada ----
-ok('la portada ofrece los tres accesos con su cifra', /30 canciones/.test($('[data-lib="todas"]').textContent) && /Artistas/.test($('[data-lib="artistas"]').textContent) && /28 por revisar/.test($('[data-lib="pendientes"]').textContent));
+ok('la portada resume el total en la cabecera', /30 canciones/.test($('.hero').textContent));
+ok('las cajas muestran hasta 7 filas y "Ver más"', ['b-new', 'b-pend', 'b-todas'].every((c) => $$('.' + c + ' .mini').length === 7) && $$('.b-art .mini').length === 6 && ['nuevas', 'pendientes', 'todas', 'artistas'].every((p) => /Ver más/.test($('[data-lib="' + p + '"]').textContent)));
+ok('Pendientes anuncia 28 por revisar', /28 por revisar/.test($('.b-pend header').textContent));
+ok('Nuevas muestra hace cuánto se subió cada una', /hace/.test($('.b-new .mini .mi-m').textContent));
+click($('[data-lib="nuevas"]'));
+ok('Ver más de Nuevas lista todas, la más reciente primero', /Nuevas30/.test($('.crumb h1').textContent) && $$('.item').length === 30);
+click($('[data-lib="home"]'));
+const th0 = d.documentElement.getAttribute('data-theme');
+click($('#theme'));
+ok('el interruptor cambia el tema y lo recuerda', d.documentElement.getAttribute('data-theme') !== th0 && w.localStorage.getItem('songbookcg.tema') === d.documentElement.getAttribute('data-theme'));
+click($('#theme'));
+ok('un segundo toque lo devuelve', d.documentElement.getAttribute('data-theme') === th0);
 ok('la portada no muestra avance ni conteos de revisadas o dudas', !$('.prog') && !/revisadas|con dudas/.test($('#lib').textContent));
 ok('la portada no lista canciones', $$('.item').length === 0);
-ok('sin historial no hay "Visto recientemente"', !$('.vstrip'));
+ok('sin historial "Visto recientemente" sigue visible con un aviso', /Visto recientemente/.test($('.seenbox').textContent) && !$('.vstrip') && /últimas canciones/.test($('.seenbox').textContent));
 ok('fila de letras con las que existen activas', $$('.az').length === 27 && !$('[data-letter="Z"]').disabled && !$('[data-letter="K"]').disabled === false && $('[data-letter="Q"]').disabled === false);
 
 // ---- letras ----
