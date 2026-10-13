@@ -123,7 +123,7 @@ opens.forEach(n => {
 eq('formas abiertas de la biblioteca correctas (' + opens.length + ')', badOpen, 0);
 eq('C tiene varias posiciones', C.shapesFor(C.parseChord('C')).length >= 4, true);
 eq('C empieza en la forma abierta', C.shapesFor(C.parseChord('C'))[0].frets, [-1, 3, 2, 0, 1, 0]);
-eq('Bdim7 en cuatro inversiones', C.shapesFor(C.parseChord('Bdim7')).length, 5);
+eq('Bdim7 en todas sus posiciones del mango', C.shapesFor(C.parseChord('Bdim7')).length, 14);
 eq('G7/9 sigue sin forma', C.shapesFor(C.parseChord('G7/9')).length, 0);
 eq('A* sin formas de biblioteca', C.shapesFor(C.parseChord('A*')).length, 0);
 
