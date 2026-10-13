@@ -116,15 +116,55 @@ export function createImporter(d) {
         gi++; step();
       }, function (e) {
         if (!mine(run)) return;
+        var blocked = /content filter/i.test(errMsg(e));
         view.innerHTML = '<h1>No se pudo leer</h1><p class="hint" style="margin-top:6px">' + esc(title) + ': ' + esc(errMsg(e)) + '</p>' +
+          (blocked ? '<p class="hint" style="margin-top:6px">El filtro del modelo bloqueó la respuesta. A veces pasa con letras muy conocidas y suele ceder al leer la canción en dos partes. Si no, puedes escribirla a mano con la foto al lado.</p>' : '') +
           '<div class="actions" style="margin-top:12px"><button class="btn primary" type="button" id="imRetry">Reintentar</button>' +
+          (blocked ? '<button class="btn" type="button" id="imSplit">Leer en dos partes</button><button class="btn" type="button" id="imManual">Escribirla a mano</button>' : '') +
           '<button class="btn" type="button" id="imSkipSong">Saltar esta canción</button><button class="btn" type="button" id="imAbort">Terminar importación</button></div>';
         retry = step; skipSong = function () { gi++; step(); };
+        manual = function () {
+          results.push({ group: g, result: { title: g.title || '', artist: '', key: '', tuning: '', body: '', doubts: [], remarks: '' }, images: images });
+          gi++; step();
+        };
+        split = function () {
+          view.innerHTML = '<h1>Leyendo en dos partes</h1><p class="hint" style="margin-top:6px">' + esc(title) + '. Tarda un poco más.</p>';
+          var pieces = [];
+          g.indices.forEach(function (i) {
+            var b = I.boxes[i].box, h2 = b.h / 2;
+            pieces.push(d.imaging.crop(I.h, { x: b.x, y: b.y, w: b.w, h: h2 }));
+            pieces.push(d.imaging.crop(I.h, { x: b.x, y: b.y + h2, w: b.w, h: h2 }));
+          });
+          var cut = Math.ceil(pieces.length / 2);
+          var parts = [pieces.slice(0, cut), pieces.slice(cut)];
+          var out = [];
+          function part(k) {
+            if (!mine(run)) return;
+            if (k >= parts.length) {
+              var r0 = out[0], body = out.map(function (r) { return r.body || ''; }).join('\n');
+              results.push({ group: g, images: images, result: {
+                title: r0.title || out[1].title || '', artist: r0.artist || out[1].artist || '', key: r0.key || out[1].key || '', tuning: r0.tuning || out[1].tuning || '',
+                body: body, doubts: [].concat(out[0].doubts || [], out[1].doubts || []), remarks: [out[0].remarks, out[1].remarks].filter(Boolean).join(' ')
+              } });
+              gi++; step(); return;
+            }
+            d.api.readPage({ mode: 'transcribe', images: parts[k], hint: [hint, 'parte ' + (k + 1) + ' de 2 de la canción; puede empezar o terminar en medio de una línea'].filter(Boolean).join(', ') }).then(function (r) {
+              out.push(r); part(k + 1);
+            }, function (e2) {
+              if (!mine(run)) return;
+              view.innerHTML = '<h1>No se pudo leer</h1><p class="hint" style="margin-top:6px">' + esc(title) + ' (parte ' + (k + 1) + ' de 2): ' + esc(errMsg(e2)) + '</p>' +
+                '<div class="actions" style="margin-top:12px"><button class="btn primary" type="button" id="imManual">Escribirla a mano</button><button class="btn" type="button" id="imSkipSong">Saltar esta canción</button><button class="btn" type="button" id="imAbort">Terminar importación</button></div>';
+            });
+          }
+          part(0);
+        };
       });
     }
-    var retry = null, skipSong = null;
+    var retry = null, skipSong = null, manual = null, split = null;
     I.retry = function () { retry && retry(); };
     I.skipSong = function () { skipSong && skipSong(); };
+    I.manual = function () { manual && manual(); };
+    I.split = function () { split && split(); };
     step();
   }
 
@@ -181,6 +221,8 @@ export function createImporter(d) {
     else if (id === 'imSkip') nextPhoto();
     else if (id === 'imRetry') I.retry();
     else if (id === 'imSkipSong') I.skipSong();
+    else if (id === 'imManual') I.manual();
+    else if (id === 'imSplit') I.split();
     else if (id === 'imAbort') finish();
     else if (e.target.getAttribute && e.target.getAttribute('data-del') != null) {
       if (I.boxes.length <= 1) { d.toast('Debe quedar al menos un recuadro.', true); return; }
