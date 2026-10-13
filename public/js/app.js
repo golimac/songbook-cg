@@ -167,20 +167,71 @@ function stripHTML(song, ctx) {
 
 /* ---------- Biblioteca ---------- */
 var STATUS = { pendiente: ['Pendiente', ''], dudas: ['Con dudas', 'warn'], revisada: ['Revisada', 'ok'] };
+var LIB = { view: 'az', st: 'todas' };
+var LIB_VIEWS = [['az', 'A–Z'], ['artistas', 'Artistas'], ['recientes', 'Recientes']];
+function stamp(t) { return t && typeof t.toMillis === 'function' ? t.toMillis() : typeof t === 'number' ? t : t === null ? Date.now() : 0; }
+function ago(ms) {
+  if (!ms) return '';
+  var m = Math.round((Date.now() - ms) / 60000);
+  if (m < 2) return 'hace un momento';
+  if (m < 60) return 'hace ' + m + ' min';
+  var h = Math.round(m / 60);
+  if (h < 24) return 'hace ' + h + (h === 1 ? ' hora' : ' horas');
+  var d = Math.round(h / 24);
+  if (d < 31) return d === 1 ? 'ayer' : 'hace ' + d + ' días';
+  return new Date(ms).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 function renderLibrary() {
   imp.cancel(); stopAuto(); hidePop();
   S.review = null;
   S.view = 'library'; S.song = null;
-  view.innerHTML = '<div class="libhead"><h1>Biblioteca</h1></div>' +
-    '<input id="q" type="search" placeholder="Buscar por título, artista o fuente" autocomplete="off" aria-label="Buscar canciones">' +
-    '<p class="count" id="count"></p><div class="list" id="list"></div>';
+  view.innerHTML = '<div class="libhead"><h1>Biblioteca</h1><div class="tabs" role="tablist" aria-label="Cómo ordenar">' +
+    LIB_VIEWS.map(function (v) { return '<button type="button" role="tab" class="tab-b" data-lv="' + v[0] + '" aria-selected="' + (LIB.view === v[0]) + '">' + v[1] + '</button>'; }).join('') + '</div></div>' +
+    '<div id="stats"></div>' +
+    '<input id="q" type="search" placeholder="Buscar por título o artista" autocomplete="off" aria-label="Buscar canciones">' +
+    '<p class="count" id="count"></p><div class="libbody"><div class="list" id="list"></div><nav class="rail" id="rail" aria-label="Ir a la letra"></nav></div>';
   $('#q').value = S.q;
   fillList();
 }
+function statsHTML() {
+  var c = { todas: songs.length, revisada: 0, dudas: 0, pendiente: 0 };
+  songs.forEach(function (s) { c[STATUS[s.status] ? s.status : 'pendiente']++; });
+  var pct = function (n) { return c.todas ? (n * 100 / c.todas).toFixed(1) : 0; };
+  function b(key, label, n, cls) {
+    return '<button type="button" class="stb ' + cls + '" data-st="' + key + '" aria-pressed="' + (LIB.st === key) + '"><b>' + n + '</b> ' + label + '</button>';
+  }
+  return '<div class="prog" aria-hidden="true"><i class="p-ok" style="width:' + pct(c.revisada) + '%"></i><i class="p-dd" style="width:' + pct(c.dudas) + '%"></i></div>' +
+    '<div class="stbar">' + b('todas', 'en total', c.todas, '') + b('revisada', c.revisada === 1 ? 'revisada' : 'revisadas', c.revisada, 'ok') +
+    b('dudas', 'con dudas', c.dudas, 'warn') + b('pendiente', c.pendiente === 1 ? 'pendiente' : 'pendientes', c.pendiente, '') + '</div>';
+}
+function songItem(s, sub) {
+  var n = s.doubts || 0;
+  var st = STATUS[s.status] || STATUS.pendiente;
+  return '<button class="item" data-open="' + esc(s.id) + '"><span class="it-title">' + esc(s.title) + '</span>' +
+    '<span class="it-chips">' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') +
+    (n ? '<span class="chip warn">' + n + (n === 1 ? ' duda' : ' dudas') + '</span>' : '') +
+    '<span class="chip ' + st[1] + '">' + st[0] + '</span></span>' +
+    (sub ? '<span class="it-sub">' + esc(sub) + '</span>' : '') + '</button>';
+}
+/* Versiones de una misma canción (mismo título y artista) quedan juntas en un marco */
+function itemsHTML(list, withArtist) {
+  var out = [], i = 0;
+  while (i < list.length) {
+    var k = norm(list[i].title) + '|' + norm(list[i].artist), j = i;
+    while (j < list.length && norm(list[j].title) + '|' + norm(list[j].artist) === k) j++;
+    var grp = list.slice(i, j).map(function (s) { return songItem(s, withArtist ? s.artist : ''); }).join('');
+    out.push(j - i > 1 ? '<div class="vgroup"><span class="vg-l">' + (j - i) + ' versiones</span>' + grp + '</div>' : grp);
+    i = j;
+  }
+  return out.join('');
+}
+function byTitle(a, b) { return String(a.title).localeCompare(String(b.title), 'es') || String(a.artist).localeCompare(String(b.artist), 'es'); }
+function letterOf(t) { var c = norm(t).replace(/[^a-z0-9]/g, '').charAt(0).toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; }
 function fillList() {
   if (S.view !== 'library') return;
   if (!listLoaded) { $('#count').textContent = ''; $('#list').innerHTML = '<p class="hint">Cargando biblioteca…</p>'; return; }
   if (!songs.length) {
+    $('#stats').innerHTML = ''; $('#rail').innerHTML = '';
     $('#count').textContent = '';
     $('#list').innerHTML = editable()
       ? '<div class="empty"><p>La biblioteca está vacía. Agrega una canción con el botón de arriba, o carga tres canciones de ejemplo para probar la aplicación.</p>' +
@@ -188,20 +239,39 @@ function fillList() {
       : '<div class="empty"><p>La biblioteca está vacía.</p></div>';
     return;
   }
-  var q = norm(S.q);
-  var items = songs.filter(function (s) { return !q || norm(s.title + ' ' + s.artist + ' ' + s.source).indexOf(q) >= 0; })
-    .sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'es'); });
+  $('#stats').innerHTML = statsHTML();
+  var q = norm(S.q).split(/\s+/).filter(Boolean);
+  var items = songs.filter(function (s) {
+    if (LIB.st !== 'todas' && (STATUS[s.status] ? s.status : 'pendiente') !== LIB.st) return false;
+    var hay = norm(s.title + ' ' + s.artist);
+    return q.every(function (w) { return hay.indexOf(w) >= 0; });
+  });
   $('#count').textContent = items.length + (items.length === 1 ? ' canción' : ' canciones');
-  $('#list').innerHTML = items.length ? items.map(function (s) {
-    var n = s.doubts || 0;
-    var st = STATUS[s.status] || STATUS.pendiente;
-    var k = parseKey(s.key);
-    return '<button class="item" data-open="' + esc(s.id) + '"><span class="it-title">' + esc(s.title) + '</span>' +
-      '<span class="it-chips">' + (k ? '<span class="chip">' + esc(s.key) + '</span>' : '') +
-      (n ? '<span class="chip warn">' + n + (n === 1 ? ' duda' : ' dudas') + '</span>' : '') +
-      '<span class="chip ' + st[1] + '">' + st[0] + '</span></span>' +
-      '<span class="it-sub">' + esc([s.artist].filter(Boolean).join(' · ')) + '</span></button>';
-  }).join('') : '<p class="hint">No hay canciones que coincidan.</p>';
+  var html = '', letters = [];
+  if (!items.length) html = '<p class="hint">No hay canciones que coincidan.</p>';
+  else if (LIB.view === 'recientes') {
+    html = items.slice().sort(function (a, b) { return stamp(b.updatedAt) - stamp(a.updatedAt); }).slice(0, 40).map(function (s) {
+      return songItem(s, [s.artist, ago(stamp(s.updatedAt))].filter(Boolean).join(' · '));
+    }).join('');
+  } else if (LIB.view === 'artistas') {
+    var by = {};
+    items.forEach(function (s) { var a = (s.artist || '').trim() || 'Sin artista'; (by[a] = by[a] || []).push(s); });
+    html = Object.keys(by).sort(function (a, b) {
+      if (a === 'Sin artista') return 1; if (b === 'Sin artista') return -1;
+      return a.localeCompare(b, 'es');
+    }).map(function (a) {
+      return '<h2 class="lg">' + esc(a) + '<span>' + by[a].length + '</span></h2>' + itemsHTML(by[a].sort(byTitle), false);
+    }).join('');
+  } else {
+    items.sort(byTitle).forEach(function (s) { var L = letterOf(s.title); if (letters.indexOf(L) < 0) letters.push(L); });
+    // los grupos de versiones se arman por letra
+    var groups = {};
+    items.forEach(function (s) { var L = letterOf(s.title); (groups[L] = groups[L] || []).push(s); });
+    html = letters.map(function (L) { return '<h2 class="lg" id="g-' + (L === '#' ? 'num' : L) + '">' + L + '</h2>' + itemsHTML(groups[L], true); }).join('');
+  }
+  $('#list').innerHTML = html;
+  $('#rail').innerHTML = LIB.view === 'az' && items.length >= 24
+    ? letters.map(function (L) { return '<button type="button" data-jump="' + (L === '#' ? 'num' : L) + '" aria-label="Ir a ' + L + '">' + L + '</button>'; }).join('') : '';
 }
 
 /* ---------- Acceso ---------- */
@@ -550,6 +620,12 @@ view.addEventListener('click', function (e) {
   }
   var o = t.closest('[data-open]');
   if (o) { openSong(o.getAttribute('data-open')); return; }
+  var lv = t.closest('[data-lv]');
+  if (lv) { LIB.view = lv.getAttribute('data-lv'); renderLibrary(); return; }
+  var sb = t.closest('[data-st]');
+  if (sb) { var k = sb.getAttribute('data-st'); LIB.st = LIB.st === k ? 'todas' : k; fillList(); return; }
+  var jp = t.closest('[data-jump]');
+  if (jp) { var g = document.getElementById('g-' + jp.getAttribute('data-jump')); if (g) g.scrollIntoView({ block: 'start' }); return; }
   var ed = t.closest('[data-edit]');
   if (ed) { var eo = ed.getAttribute('data-edit'); openDg(eo, shownFor(eo)); return; }
   var a = t.closest('[data-act]');

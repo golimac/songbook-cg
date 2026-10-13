@@ -98,7 +98,32 @@
 
   /* Biblioteca */
   .libhead { @apply flex items-center justify-between gap-3 flex-wrap mb-4; }
+  .tabs { @apply inline-flex p-0.5 gap-0.5 bg-card border border-rule rounded-xl; }
+  .tab-b { @apply h-8 px-3.5 text-sm font-medium rounded-[10px] bg-transparent border-0 text-mute transition-colors; }
+  .tab-b:hover { @apply text-ink; }
+  .tab-b[aria-selected=true] { @apply bg-spruce text-(--accent-ink); }
+  .prog { @apply flex h-1.5 rounded-full overflow-hidden bg-rule mb-2.5; }
+  .prog i { @apply block h-full; }
+  .p-ok { background: var(--ok); }
+  .p-dd { background: var(--brass); }
+  .stbar { @apply flex flex-wrap gap-2 mb-3.5; }
+  .stb { @apply h-8 px-3 text-[13px] rounded-full border border-rule bg-card text-mute transition-colors; }
+  .stb b { @apply text-ink font-semibold tabular-nums; }
+  .stb:hover { @apply border-spruce; }
+  .stb[aria-pressed=true] { @apply border-spruce; background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+  .stb.ok b { color: var(--ok); }
+  .stb.warn b { @apply text-doubt-ink; }
   #q { @apply w-full h-11 px-4 rounded-xl text-base; }
+  .libbody { @apply grid gap-3; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 640px) { .libbody { grid-template-columns: minmax(0, 1fr) 26px; } }
+  .rail { @apply hidden flex-col items-center sticky self-start; top: calc(var(--hh) + 16px); max-height: calc(100vh - var(--hh) - 32px); overflow: auto; }
+  @media (min-width: 640px) { .rail:not(:empty) { @apply flex; } }
+  .rail button { @apply w-6 h-[18px] text-[11px] font-semibold leading-none text-mute bg-transparent border-0 rounded hover:text-spruce; }
+  .lg { @apply flex items-baseline gap-2 font-display text-xl font-semibold mt-5 mb-1 scroll-mt-20 text-spruce; }
+  .lg:first-child { @apply mt-1; }
+  .lg span { @apply font-sans text-xs font-medium text-mute; }
+  .vgroup { @apply grid gap-1.5 rounded-xl p-1.5 border border-dashed border-rule; }
+  .vg-l { @apply text-[11px] font-medium text-mute px-2 pt-0.5; }
   .count { @apply text-mute text-[13px] my-3; }
   .list { @apply grid gap-2; }
   .item { @apply grid w-full text-left px-4 py-3 border border-rule bg-card rounded-xl gap-x-3 gap-y-0.5 transition-all; grid-template-columns: minmax(0, 1fr) auto; }
@@ -106,6 +131,13 @@
   .it-title { @apply font-display font-semibold text-base [overflow-wrap:anywhere]; }
   .it-chips { @apply flex gap-1.5 flex-wrap justify-end; }
   .it-sub { @apply text-mute text-[13px]; grid-column: 1 / -1; }
+  @media (min-width: 640px) {
+    .item { @apply py-2 items-center; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; grid-template-areas: "t s c"; }
+    .item .it-title { grid-area: t; }
+    .item .it-sub { grid-area: s; grid-column: auto; justify-self: start; max-width: 100%; text-align: left; @apply overflow-hidden text-ellipsis whitespace-nowrap; }
+    .item .it-chips { grid-area: c; }
+    .item:not(:has(.it-sub)) { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "t c"; }
+  }
   .foot { @apply mt-6 text-mute text-[13px]; }
 
   /* Canción */
