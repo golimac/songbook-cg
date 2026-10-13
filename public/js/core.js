@@ -15,8 +15,9 @@ function parseChord(s) {
   s = String(s).trim();
   var m = /^([A-G])([#b]?)([^\/*?]*?)(?:\/([A-G][#b]?|\d+))?(\*)?(\?)?$/.exec(s);
   if (!m) return null;
-  if (!QUAL_OK.test(m[3])) return null;
-  return { root: m[1], acc: m[2], qual: m[3], bass: m[4] || '', star: !!m[5], doubt: !!m[6] };
+  var qual = m[3].replace(/^d(?!im)/, 'dim');
+  if (!QUAL_OK.test(qual)) return null;
+  return { root: m[1], acc: m[2], qual: qual, bass: m[4] || '', star: !!m[5], doubt: !!m[6] };
 }
 function chordPc(c) { return mod12(NAT[c.root] + accVal(c.acc)); }
 function isMinorQual(q) { return /^(m(?!aj)|min)/.test(q); }

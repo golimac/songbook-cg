@@ -13,6 +13,9 @@ const t = (sym, n, key) => {
 // lectura de acordes
 eq('G7/9 extensión', C.parseChord('G7/9').bass, '9');
 eq('D/F# bajo', C.parseChord('D/F#').bass, 'F#');
+eq('Bd7 se lee como disminuido', C.parseChord('Bd7').qual, 'dim7');
+eq('Bdim7 sigue igual', C.parseChord('Bdim7').qual, 'dim7');
+eq('Bd7 tiene diagrama', C.shapesFor(C.parseChord('Bd7')).length > 0, true);
 eq('Sld7 no es acorde', C.parseChord('Sld7'), null);
 eq('A* variante', C.parseChord('A*').star, true);
 eq('Bdim7', C.parseChord('Bdim7').qual, 'dim7');
