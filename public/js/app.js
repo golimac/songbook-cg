@@ -1,6 +1,6 @@
 import {
   parseChord, chordToString, transposeChord, parseKey, flatsFor, keyName, parseBody, collectChords,
-  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove
+  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove, setUserShapes, chordKey
 } from './core.js';
 import { imaging as realImaging } from './photo.js';
 import { createImporter } from './import.js';
@@ -34,6 +34,7 @@ var SAMPLES = [
 ];
 
 /* ---------- Estado ---------- */
+var chordLib = {};         // biblioteca de acordes: nombre -> [{frets, base, barre}]
 var songs = [];            // datos livianos de la lista, en vivo desde Firestore
 var listLoaded = false;
 var user = null, unsub = null, denied = false;
@@ -304,8 +305,37 @@ var IC = {
   todas: '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
   art: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6"/></svg>',
   pend: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8.5 9h7M8.5 13h7M8.5 17h4"/></svg>',
+  ch: '<svg viewBox="0 0 24 24"><path d="M6 3v18M12 3v18M18 3v18M4 7h16M4 13h16"/><circle cx="12" cy="10" r="1.6"/></svg>',
   seen: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'
 };
+function chordNames() {
+  return Object.keys(chordLib).filter(function (n) { return (chordLib[n] || []).length; }).sort(function (a, b) {
+    var ca = parseChord(a), cb = parseChord(b);
+    return (ca && cb ? chordPcOf(ca) - chordPcOf(cb) : 0) || (a < b ? -1 : a > b ? 1 : 0);
+  });
+}
+function chordPcOf(c) { var k = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[c.root] + (c.acc === '#' ? 1 : c.acc === 'b' ? -1 : 0); return (k + 12) % 12; }
+function chordBox() {
+  var names = chordNames();
+  if (!names.length && !editable()) return '';
+  return homeBox('b-ch', 'Acordes', plural(names.length, 'acorde', 'acordes'), IC.ch, names.slice(0, HOME_N).map(function (n) {
+    return '<button type="button" class="mini" data-lib="acordes">' + avatar(n) + '<span class="mi-t"><b>' + esc(n) + '</b></span><span class="mi-m">' + plural(chordLib[n].length, 'forma', 'formas') + '</span></button>';
+  }).join(''), 'acordes', 'Aquí quedan los diagramas que guardes sin que pertenezcan a una canción.');
+}
+function acordesHTML() {
+  var names = chordNames();
+  var h = crumb(['home', 'Inicio'], 'Acordes', names.length);
+  if (editable()) {
+    h += '<form class="chadd" id="chAdd"><label class="f">Nuevo acorde<input type="text" id="chName" autocomplete="off" placeholder="Por ejemplo Am7, C4 o C/G"></label>' +
+      '<button class="btn primary" type="submit">Dibujar acorde</button><span class="hint" id="chMsg" role="status"></span></form>';
+  }
+  if (!names.length) return h + '<div class="empty"><p>' + (editable() ? 'Escribe el nombre de un acorde y dibuja su forma. Se usará en todas las canciones que lo tengan.' : 'Todavía no hay acordes guardados.') + '</p></div>';
+  return h + '<div class="chgrid">' + names.map(function (n) {
+    return '<article class="chcard"><h3>' + esc(n) + '</h3><div class="chshapes">' + chordLib[n].map(function (d, i) {
+      return '<figure>' + dgSVG(d, 72) + (editable() ? '<button type="button" class="btn" data-chedit="' + esc(n) + '" data-i="' + i + '">Editar</button>' : '') + '</figure>';
+    }).join('') + '</div>' + (editable() ? '<button type="button" class="btn" data-chadd="' + esc(n) + '">Agregar otra forma</button>' : '') + '</article>';
+  }).join('') + '</div>';
+}
 function homeHTML() {
   var byId = {}; songs.forEach(function (s) { byId[s.id] = s; });
   var seen = vistas().map(function (id) { return byId[id]; }).filter(Boolean).slice(0, 8);
@@ -335,6 +365,7 @@ function homeHTML() {
       homeBox('b-art', 'Artistas', plural(names.length, 'artista', 'artistas'), IC.art, top.slice(0, HOME_N).map(function (a) {
         return '<button type="button" class="mini" data-artist="' + esc(a) + '">' + avatar(a) + '<span class="mi-t"><b>' + esc(a) + '</b></span><span class="mi-m">' + plural(by[a].length, 'canción', 'canciones') + '</span></button>';
       }).join(''), 'artistas', '') +
+      chordBox() +
     '</div>';
 }
 function nuevasHTML() {
@@ -381,7 +412,7 @@ function fillList() {
   if (S.view !== 'library') return;
   var box = $('#lib'); if (!box) return;
   if (!listLoaded) { box.innerHTML = '<p class="hint">Cargando biblioteca…</p>'; return; }
-  if (!songs.length) {
+  if (!songs.length && LIB.page !== 'acordes') {
     box.innerHTML = editable()
       ? '<div class="empty"><p>La biblioteca está vacía. Agrega una canción con el botón de arriba, o carga tres canciones de ejemplo para probar la aplicación.</p>' +
         '<button class="btn" id="seed">Cargar canciones de ejemplo</button></div>'
@@ -392,7 +423,7 @@ function fillList() {
   var page = LIB.page === 'artista' && !songs.some(function (s) { return hasArtist(s, LIB.artist); }) ? 'artistas' : LIB.page;
   box.innerHTML = S.q.trim() ? resultsHTML(S.q)
     : page === 'todas' ? todasHTML() : page === 'artistas' ? artistasHTML() : page === 'artista' ? artistaHTML()
-    : page === 'pendientes' ? pendientesHTML() : page === 'nuevas' ? nuevasHTML() : homeHTML();
+    : page === 'pendientes' ? pendientesHTML() : page === 'nuevas' ? nuevasHTML() : page === 'acordes' ? acordesHTML() : homeHTML();
   if (LIB.jump) {
     var g = document.getElementById('g-' + (LIB.jump === '#' ? 'num' : LIB.jump));
     LIB.jump = '';
@@ -724,7 +755,7 @@ function findAlbum() {
   }, function (e) { if (S.view === 'edit') msg.textContent = 'No se pudo buscar: ' + ((e && e.message) || 'error'); });
 }
 /* ---------- Editor de diagramas ---------- */
-var dgS = null, dgTarget = null;
+var dgS = null, dgTarget = null, dgLib = null;
 function dgOut() {
   return { frets: dgS.frets.slice(), base: dgS.base, barre: dgS.barre.on ? { fret: dgS.barre.fret, from: dgS.barre.from, to: dgS.barre.to } : null };
 }
@@ -741,6 +772,39 @@ function openDg(orig, start) {
   $('#dgModal').hidden = false;
   $('#dgBase').focus();
 }
+function openDgLib(name, idx) {
+  if (!editable()) return;
+  var cur0 = idx != null && chordLib[name] ? chordLib[name][idx] : null;
+  var b = cur0 || shapeFor(parseChord(name)) || { frets: [-1, -1, -1, -1, -1, -1], base: 1, barre: null };
+  dgLib = { name: name, idx: cur0 ? idx : null };
+  dgS = { orig: name, frets: b.frets.slice(), base: b.base || 1,
+    barre: b.barre ? { on: true, fret: b.barre.fret, from: b.barre.from, to: b.barre.to } : { on: false, fret: b.base || 1, from: 0, to: 5 }, hasCustom: !!cur0 };
+  $('#dgTitle').textContent = 'Diagrama de ' + name;
+  $('#dgDel').hidden = !cur0; $('#dgDel').textContent = 'Quitar esta forma';
+  renderDg();
+  $('#dgModal').hidden = false;
+  $('#dgBase').focus();
+}
+function saveLibShape(out) {
+  var n = dgLib.name, shapes = (chordLib[n] || []).slice();
+  if (dgLib.idx != null) shapes[dgLib.idx] = out; else shapes.push(out);
+  chordLib[n] = shapes; onChords();
+  api.saveChord(n, shapes).catch(failSave);
+}
+function dropLibShape() {
+  var n = dgLib.name, shapes = (chordLib[n] || []).filter(function (x, i) { return i !== dgLib.idx; });
+  if (shapes.length) { chordLib[n] = shapes; api.saveChord(n, shapes).catch(failSave); }
+  else { delete chordLib[n]; api.deleteChord(n).catch(failSave); }
+  onChords();
+}
+function onChords() {
+  var m = {};
+  Object.keys(chordLib).forEach(function (n) { var c = parseChord(n); if (c) m[chordKey(c)] = chordLib[n]; });
+  setUserShapes(m);
+  if (S.view === 'song' && S.song) refreshSong();
+  else if (S.view === 'edit' && S.draft) refreshPreview();
+  else if (S.view === 'library') fillList();
+}
 function opts(from, to, label, sel) {
   var s = '';
   for (var i = from; i <= to; i++) s += '<option value="' + i + '"' + (i === sel ? ' selected' : '') + '>' + label(i) + '</option>';
@@ -756,7 +820,7 @@ function renderDg() {
   $('#dgBFrom').innerHTML = opts(0, 5, sl, dgS.barre.from);
   $('#dgBTo').innerHTML = opts(0, 5, sl, dgS.barre.to);
 }
-function closeDg() { $('#dgModal').hidden = true; dgS = null; }
+function closeDg() { $('#dgModal').hidden = true; dgS = null; dgLib = null; $('#dgDel').textContent = 'Quitar el propio'; }
 function afterDg() {
   if (S.view === 'edit') refreshPreview();
   else { api.saveSong(S.song, false).catch(failSave); refreshSong(); }
@@ -887,6 +951,10 @@ view.addEventListener('click', function (e) {
   if (t.id === 'alClear') { $('#fAlbum').value = ''; $('#fYear').value = ''; $('#fCover').value = ''; readForm(); coverPrev(); $('#alRes').hidden = true; $('#alMsg').textContent = ''; return; }
   var o = t.closest('[data-open]');
   if (o) { openSong(o.getAttribute('data-open')); return; }
+  var ce = t.closest('[data-chedit]');
+  if (ce) { openDgLib(ce.getAttribute('data-chedit'), parseInt(ce.getAttribute('data-i'), 10)); return; }
+  var ca = t.closest('[data-chadd]');
+  if (ca) { openDgLib(ca.getAttribute('data-chadd'), null); return; }
   var lb = t.closest('[data-lib]');
   if (lb) {
     var pg = lb.getAttribute('data-lib');
@@ -938,6 +1006,13 @@ view.addEventListener('change', function (e) {
   }
 });
 view.addEventListener('submit', function (e) {
+  if (e.target.id === 'chAdd') {
+    e.preventDefault();
+    var raw = $('#chName').value.trim(), c = parseChord(raw);
+    if (!c || c.star || c.doubt) { $('#chMsg').textContent = 'No reconozco ese acorde. Prueba con Am7, C4 o C/G.'; return; }
+    openDgLib(chordKey(c), null);
+    return;
+  }
   e.preventDefault();
   if (S.view !== 'edit') return;
   readForm();
@@ -1039,11 +1114,13 @@ $('#dgBF').addEventListener('change', function (e) { dgS.barre.fret = parseInt(e
 $('#dgBFrom').addEventListener('change', function (e) { dgS.barre.from = parseInt(e.target.value, 10); if (dgS.barre.to < dgS.barre.from) dgS.barre.to = dgS.barre.from; renderDg(); });
 $('#dgBTo').addEventListener('change', function (e) { dgS.barre.to = parseInt(e.target.value, 10); if (dgS.barre.from > dgS.barre.to) dgS.barre.from = dgS.barre.to; renderDg(); });
 $('#dgSave').addEventListener('click', function () {
+  if (dgLib) { saveLibShape(dgOut()); closeDg(); return; }
   dgTarget.diagrams = dgTarget.diagrams || {};
   dgTarget.diagrams[dgS.orig] = dgOut();
   closeDg(); afterDg();
 });
 $('#dgDel').addEventListener('click', function () {
+  if (dgLib) { dropLibShape(); closeDg(); return; }
   if (dgTarget.diagrams) delete dgTarget.diagrams[dgS.orig];
   closeDg(); afterDg();
 });
@@ -1065,4 +1142,8 @@ document.addEventListener('keydown', function (e) {
 });
 
 api.onAuth(applyAuth);
+if (api.subscribeChords) api.subscribeChords(function (list) {
+  chordLib = {}; list.forEach(function (d) { if (d && d.name && d.shapes && d.shapes.length) chordLib[d.name] = d.shapes; });
+  onChords();
+}, function () {});
 }

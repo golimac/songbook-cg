@@ -2,6 +2,7 @@
 //
 // Modelo en Firestore:
 //   songs/{id}   datos livianos para la lista: title, artist, key, tuning, source, page, status, doubts, album, year, cover, createdAt, updatedAt
+//   chords/{nombre}  formas propias de un acorde suelto (biblioteca de acordes): name, shapes [{frets, base, barre}]
 //   bodies/{id}  cuerpo pesado, se lee al abrir la canción: body, diagrams, prefs (posición principal por acorde)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import {
@@ -9,7 +10,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, getDoc, onSnapshot, query, where, writeBatch, serverTimestamp
+  collection, doc, getDoc, onSnapshot, query, where, writeBatch, serverTimestamp, setDoc, deleteDoc
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
@@ -47,6 +48,17 @@ export function createFirebaseApi() {
         onData(snap.docs.map((d) => Object.assign({ id: d.id }, d.data())));
       }, onError);
     },
+
+    // Biblioteca de acordes: pública para leer, solo el dueño escribe.
+    subscribeChords(onData, onError) {
+      return onSnapshot(collection(db, 'chords'), (snap) => {
+        onData(snap.docs.map((d) => d.data()).filter((x) => x && x.name));
+      }, onError || (() => {}));
+    },
+    saveChord(name, shapes) {
+      return setDoc(doc(db, 'chords', name.replace(/\//g, '_')), { name, shapes, updatedAt: serverTimestamp() });
+    },
+    deleteChord(name) { return deleteDoc(doc(db, 'chords', name.replace(/\//g, '_'))); },
 
     async getBody(id) {
       const s = await getDoc(doc(db, 'bodies', id));

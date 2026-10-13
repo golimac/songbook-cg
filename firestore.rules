@@ -13,6 +13,11 @@ service cloud.firestore {
       allow read: if resource.data.status == 'revisada' || dueno();
       allow write: if dueno();
     }
+    // Las formas de acordes de la biblioteca son públicas para leer.
+    match /chords/{id} {
+      allow read: if true;
+      allow write: if dueno();
+    }
     match /bodies/{id} {
       allow read: if get(/databases/$(database)/documents/songs/$(id)).data.status == 'revisada' || dueno();
       allow write: if dueno();

@@ -154,6 +154,13 @@
   .tg .ic-sun { display: none; }
   :root[data-theme="dark"] .tg .ic-sun { display: block; }
   :root[data-theme="dark"] .tg .ic-moon { display: none; }
+  .chadd { @apply flex items-end gap-3 flex-wrap mb-5; }
+  .chadd .f { @apply flex-1; min-width: 220px; max-width: 360px; }
+  .chgrid { @apply grid gap-4; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .chcard { @apply flex flex-col gap-3 bg-card border border-rule rounded-2xl p-4; }
+  .chcard h3 { @apply font-display font-semibold text-xl text-ink; }
+  .chshapes { @apply flex flex-wrap gap-3; }
+  .chshapes figure { @apply flex flex-col items-center gap-1.5; }
   .crumb { @apply flex items-center gap-3 flex-wrap mb-4; }
   .crumb h1 { @apply flex items-baseline gap-2.5; }
   .crumb h1 span { @apply font-sans text-base font-medium text-mute; }

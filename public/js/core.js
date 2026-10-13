@@ -221,6 +221,15 @@ var SLASH = {
   'A/C#': ['x42220'], 'A/E': ['002220'], 'Em/G': ['320000']
 };
 /* Formas del impreso con nombre propio (cuerdas 6 a 1). Van primero; C4 del cancionero no es C sus4: lleva el mi grave y el mi agudo al aire. */
+/* Formas guardadas por el editor en la biblioteca de acordes: { 'Am7': [{frets, base, barre}] }. Van antes que las del catálogo. */
+var USER = {};
+function setUserShapes(m) { USER = m || {}; }
+function chordKey(c) { return c.root + c.acc + c.qual + (c.bass ? '/' + c.bass : ''); }
+function userKeys(c) {
+  var ks = [chordKey(c)];
+  if (!c.bass) { var pc = chordPc(c); [SHARP[pc], FLAT[pc]].forEach(function (n) { if (ks.indexOf(n + c.qual) < 0) ks.push(n + c.qual); }); }
+  return ks;
+}
 var RAW = { 'C4': ['033010'], 'G7/9': ['300201'] };
 var MOV_D = { '': [-1, -1, 0, 2, 3, 2], m: [-1, -1, 0, 2, 3, 1], '7': [-1, -1, 0, 2, 1, 2], m7: [-1, -1, 0, 2, 1, 1], maj7: [-1, -1, 0, 2, 2, 2], sus4: [-1, -1, 0, 2, 3, 3] };
 
@@ -231,6 +240,9 @@ function shapesFor(c) {
   var pc = chordPc(c);
   var out = [], seen = {};
   function add(d) { var k = d.frets.join(','); if (seen[k]) return; seen[k] = 1; out.push(d); }
+  userKeys(c).forEach(function (k) {
+    (USER[k] || []).forEach(function (d) { add({ frets: d.frets.slice(), base: d.base || 1, barre: d.barre ? { fret: d.barre.fret, from: d.barre.from, to: d.barre.to } : null }); });
+  });
   var raw = RAW[c.root + c.acc + c.qual + (c.bass ? '/' + c.bass : '')];
   if (raw) raw.forEach(function (x) { add(fromCode(x)); });
   if (c.bass) {
@@ -440,5 +452,5 @@ function listDoubts(body) {
 export {
   parseChord, chordToString, chordPc, transposeChord, parseKey, flatsFor, keyName,
   tokenizeLine, segTokens, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
-  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove
+  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, setUserShapes, chordKey
 };

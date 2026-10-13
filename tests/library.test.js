@@ -21,11 +21,14 @@ const list = [
 ];
 for (let i = 0; i < 25; i++) list.push(mk('x' + i, 'Canción ' + String.fromCharCode(66 + (i % 20)) + i, 'Grupo ' + (i % 3), 'pendiente', 0, 100 + i));
 
+let chordCb = null; const saved = [];
 const api = {
   onAuth(cb) { cb({ uid: 'u', email: 'yo@example.test' }); return () => {}; },
   async signIn() {}, async signOut() {},
   subscribeSongs(ok) { setTimeout(() => ok(list.map((s) => ({ ...s }))), 0); return () => {}; },
   async getBody() { return { body: '', diagrams: {} }; },
+  subscribeChords(ok2) { chordCb = ok2; return () => {}; },
+  saveChord(n, sh) { saved.push([n, sh]); return Promise.resolve(); }, deleteChord(n) { saved.push([n, null]); return Promise.resolve(); },
   saveSong() { return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
 };
 
@@ -108,6 +111,29 @@ ok('volver regresa al directorio', $$('.artist').length > 3);
 click($('[data-lib="home"]'));
 click($('[data-lib="pendientes"]'));
 ok('Pendientes: todo lo que no está revisado', $$('.item').length === 28 && !$$('.item').some((i) => /Revisada/.test(i.textContent)) && $$('.item').some((i) => /Con dudas/.test(i.textContent)));
+
+// ---- biblioteca de acordes ----
+click($('[data-lib="home"]'));
+ok('la portada tiene la caja Acordes para el editor', !!$('.b-ch'));
+click($('.b-ch .more'));
+ok('la página Acordes ofrece el formulario al editor', !!$('#chAdd') && /Escribe el nombre/.test($('#lib').textContent));
+$('#chName').value = 'zzz';
+$('#chAdd').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+ok('un nombre que no es acorde se avisa', /No reconozco/.test($('#chMsg').textContent) && $('#dgModal').hidden);
+$('#chName').value = 'Am7';
+$('#chAdd').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+ok('un acorde válido abre el editor de diagramas', !$('#dgModal').hidden && /Am7/.test($('#dgTitle').textContent) && $('#dgDel').hidden);
+click($('#dgSave'));
+ok('guardar manda la forma a la biblioteca', saved.length === 1 && saved[0][0] === 'Am7' && saved[0][1].length === 1 && $('#dgModal').hidden);
+ok('la tarjeta del acorde aparece en la página', $$('.chcard h3').some((h) => h.textContent === 'Am7') && $$('.chcard svg').length === 1);
+chordCb([{ name: 'Am7', shapes: saved[0][1] }, { name: 'C4', shapes: [{ frets: [-1, 3, 3, 0, 1, 0], base: 1, barre: null }] }]);
+ok('la suscripción reemplaza la biblioteca', $$('.chcard h3').map((h) => h.textContent).join() === 'C4,Am7');
+click($('[data-chedit="C4"]'));
+ok('Editar abre la forma guardada', !$('#dgModal').hidden && !$('#dgDel').hidden);
+click($('#dgDel'));
+ok('Quitar la última forma borra el acorde', saved[saved.length - 1][0] === 'C4' && saved[saved.length - 1][1] === null && $$('.chcard h3').map((h) => h.textContent).join() === 'Am7');
+click($('[data-lib="home"]'));
+click($('[data-lib="pendientes"]'));
 
 // ---- editar bloquea el buscador ----
 click($$('.item')[0]); await wait();
