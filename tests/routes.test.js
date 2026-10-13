@@ -21,7 +21,10 @@ let authCb;
 const list = [
   { id: 's1', title: 'Camino', artist: 'A', tuning: 'Afinación del campo', key: 'G', status: 'revisada', doubts: 0 },
   { id: 's2', title: 'Borrador', artist: 'A', key: 'G', status: 'pendiente', doubts: 0 },
-  { id: 's3', title: 'Otra', artist: 'B', key: 'Am', status: 'revisada', doubts: 0 }
+  { id: 's3', title: 'Otra', artist: 'B', key: 'Am', status: 'revisada', doubts: 0 },
+  { id: 's4', title: 'Dueto', artist: 'Silvio Rodríguez; Piero', key: 'C', status: 'revisada', doubts: 0 },
+  { id: 's5', title: 'Solo', artist: 'silvio rodriguez', key: 'C', status: 'revisada', doubts: 0 },
+  { id: 's6', title: 'Trío', artist: 'Ana;Beto ; Carlos;', key: 'C', status: 'revisada', doubts: 0 }
 ];
 const api = {
   onAuth(cb) { authCb = cb; cb(null); return () => {}; },
@@ -51,6 +54,20 @@ ok('abrir una canción pone su dirección', w.location.pathname === '/c/s1');
 click($('[data-act="share"]'));
 await wait(10);
 ok('copiar enlace avisa con la dirección completa', $$('.toast').some((t) => /s1|Enlace copiado/.test(t.textContent)));
+
+// ---- varios artistas ----
+click($('[data-act="back"]'));
+click($('[data-lib="artistas"]'));
+const names = $$('.artist span').map((x) => x.textContent);
+ok('cada artista separado por ; cuenta aparte, sin repetidos por mayúsculas o tildes', names.includes('Piero') && names.includes('Silvio Rodríguez') && !names.some((n) => /;/.test(n)) && names.filter((n) => /silvio/i.test(n)).length === 1);
+ok('Silvio suma sus dos canciones y Piero la suya', $$('.artist').find((a) => /Silvio/.test(a.textContent)).querySelector('i').textContent === '2' && $$('.artist').find((a) => /Piero/.test(a.textContent)).querySelector('i').textContent === '1');
+click($$('.artist').find((a) => /Piero/.test(a.textContent)));
+ok('la página de Piero lista el dueto y lo escribe con "y"', $$('.item').length === 1 && /Dueto/.test($('.item').textContent) && /Silvio Rodríguez y Piero/.test($('.item').textContent));
+click($('#goHome'));
+click($('[data-lib="todas"]'));
+ok('tres artistas se leen "A, B y C"', $$('.item').some((i) => /Ana, Beto y Carlos/.test(i.textContent)));
+click($('#goHome'));
+click($('[data-open="s1"]')); await wait();
 
 // ---- impresión ----
 let printed = 0; w.print = () => { printed++; };

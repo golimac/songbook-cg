@@ -225,7 +225,7 @@ function itemsHTML(list, withArtist) {
   while (i < list.length) {
     var k = norm(list[i].title) + '|' + norm(list[i].artist), j = i;
     while (j < list.length && norm(list[j].title) + '|' + norm(list[j].artist) === k) j++;
-    var grp = list.slice(i, j).map(function (s) { return songItem(s, withArtist ? s.artist : ''); }).join('');
+    var grp = list.slice(i, j).map(function (s) { return songItem(s, withArtist || artistParts(s.artist).length > 1 ? artistLabel(s) : ''); }).join('');
     out.push(j - i > 1 ? '<div class="vgroup"><span class="vg-l">' + (j - i) + ' versiones</span>' + grp + '</div>' : grp);
     i = j;
   }
@@ -233,7 +233,23 @@ function itemsHTML(list, withArtist) {
 }
 function byTitle(a, b) { return String(a.title).localeCompare(String(b.title), 'es') || String(a.artist).localeCompare(String(b.artist), 'es'); }
 function letterOf(t) { var c = norm(t).replace(/[^a-z0-9]/g, '').charAt(0).toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; }
-function artistName(s) { return (s.artist || '').trim() || 'Sin artista'; }
+/* Varios artistas se separan con ";": cada uno cuenta aparte en el índice de Artistas. */
+function artistParts(str) { return String(str || '').split(';').map(function (x) { return x.trim(); }).filter(Boolean); }
+function artistsOf(s) { var p = artistParts(s.artist); return p.length ? p : ['Sin artista']; }
+function artistLabel(s) { var p = artistParts(s.artist); return p.length > 1 ? p.slice(0, -1).join(', ') + ' y ' + p[p.length - 1] : p[0] || ''; }
+function artistGroups() { var m = artistIndex(), by = {}; Object.keys(m).forEach(function (k) { by[m[k].name] = m[k].songs; }); return by; }
+function hasArtist(s, name) { var k = norm(name); return artistsOf(s).some(function (a) { return norm(a) === k; }); }
+function artistIndex() {
+  var map = {};
+  songs.slice().sort(byTitle).forEach(function (s) {
+    var seen = {};
+    artistsOf(s).forEach(function (a) {
+      var k = norm(a); if (seen[k]) return; seen[k] = 1;
+      (map[k] = map[k] || { name: a, songs: [] }).songs.push(s);
+    });
+  });
+  return map;
+}
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 function crumb(back, title, count) {
   return '<div class="crumb"><button type="button" class="btn" data-lib="' + back[0] + '">← ' + back[1] + '</button><h1>' + esc(title) + (count != null ? '<span>' + count + '</span>' : '') + '</h1></div>';
@@ -264,8 +280,8 @@ function avatar(name, cover) {
 }
 var HOME_N = 7;
 function miniSong(s, meta) {
-  return '<button type="button" class="mini" data-open="' + esc(s.id) + '">' + avatar(s.artist || s.title, s.cover) +
-    '<span class="mi-t"><b>' + esc(s.title) + '</b><i>' + esc(s.artist || 'Sin artista') + '</i></span>' +
+  return '<button type="button" class="mini" data-open="' + esc(s.id) + '">' + avatar(artistParts(s.artist)[0] || s.title, s.cover) +
+    '<span class="mi-t"><b>' + esc(s.title) + '</b><i>' + esc(artistLabel(s) || 'Sin artista') + '</i></span>' +
     '<span class="mi-m">' + esc(meta || '') + '</span></button>';
 }
 function homeBox(cls, title, count, icon, rows, more, empty) {
@@ -284,7 +300,7 @@ function homeHTML() {
   var byId = {}; songs.forEach(function (s) { byId[s.id] = s; });
   var seen = vistas().map(function (id) { return byId[id]; }).filter(Boolean).slice(0, 8);
   var have = {}; songs.forEach(function (s) { have[letterOf(s.title)] = 1; });
-  var by = {}; songs.forEach(function (s) { var a = artistName(s); (by[a] = by[a] || []).push(s); });
+  var by = artistGroups();
   var names = Object.keys(by);
   var pendList = songs.filter(function (s) { return s.status !== 'revisada'; }).sort(byTitle);
   var nuevas = songs.slice().sort(function (a, b) { return stamp(b) - stamp(a) || byTitle(a, b); });
@@ -299,8 +315,8 @@ function homeHTML() {
     }).join('') + '</div>' +
     '<section class="box seenbox"><header><span class="bx-i" aria-hidden="true">' + IC.seen + '</span><h2>Visto recientemente</h2></header>' +
       (seen.length ? '<div class="vstrip">' + seen.map(function (s) {
-        return '<button class="vcard" data-open="' + esc(s.id) + '">' + avatar(s.artist || s.title, s.cover) + '<span class="it-title">' + esc(s.title) + '</span>' +
-          '<span class="vc-sub">' + esc(s.artist || '') + '</span>' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') + '</button>';
+        return '<button class="vcard" data-open="' + esc(s.id) + '">' + avatar(artistParts(s.artist)[0] || s.title, s.cover) + '<span class="it-title">' + esc(s.title) + '</span>' +
+          '<span class="vc-sub">' + esc(artistLabel(s)) + '</span>' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') + '</button>';
       }).join('') + '</div>' : '<p class="bx-e">Aquí quedan las últimas canciones que abras en este dispositivo.</p>') + '</section>' +
     '<div class="boxes">' +
       homeBox('b-new', 'Nuevas', '', IC.new, nuevas.slice(0, HOME_N).map(function (s) { return miniSong(s, ago(stamp(s))); }).join(''), 'nuevas', '') +
@@ -313,7 +329,7 @@ function homeHTML() {
 }
 function nuevasHTML() {
   var list = songs.slice().sort(function (a, b) { return stamp(b) - stamp(a) || byTitle(a, b); });
-  return crumb(['home', 'Inicio'], 'Nuevas', list.length) + '<div class="list">' + list.map(function (s) { return songItem(s, s.artist); }).join('') + '</div>';
+  return crumb(['home', 'Inicio'], 'Nuevas', list.length) + '<div class="list">' + list.map(function (s) { return songItem(s, artistLabel(s)); }).join('') + '</div>';
 }
 function todasHTML() {
   var items = songs.slice().sort(byTitle), groups = {}, letters = [];
@@ -324,8 +340,7 @@ function todasHTML() {
       ? letters.map(function (L) { return '<button type="button" data-jump="' + (L === '#' ? 'num' : L) + '" aria-label="Ir a ' + L + '">' + L + '</button>'; }).join('') : '') + '</nav></div>';
 }
 function artistasHTML() {
-  var by = {};
-  songs.forEach(function (s) { var a = artistName(s); (by[a] = by[a] || []).push(s); });
+  var by = artistGroups();
   var names = Object.keys(by).sort(function (a, b) {
     if (a === 'Sin artista') return 1; if (b === 'Sin artista') return -1;
     return a.localeCompare(b, 'es');
@@ -335,7 +350,7 @@ function artistasHTML() {
   }).join('') + '</div>';
 }
 function artistaHTML() {
-  var list = songs.filter(function (s) { return artistName(s) === LIB.artist; }).sort(byTitle);
+  var list = songs.filter(function (s) { return hasArtist(s, LIB.artist); }).sort(byTitle);
   return crumb(['artistas', 'Artistas'], LIB.artist, list.length) + '<div class="list">' + itemsHTML(list, false) + '</div>';
 }
 function pendientesHTML() {
@@ -364,7 +379,7 @@ function fillList() {
     return;
   }
   if (LIB.page === 'pendientes' && !editable()) LIB.page = 'home';
-  var page = LIB.page === 'artista' && !songs.some(function (s) { return artistName(s) === LIB.artist; }) ? 'artistas' : LIB.page;
+  var page = LIB.page === 'artista' && !songs.some(function (s) { return hasArtist(s, LIB.artist); }) ? 'artistas' : LIB.page;
   box.innerHTML = S.q.trim() ? resultsHTML(S.q)
     : page === 'todas' ? todasHTML() : page === 'artistas' ? artistasHTML() : page === 'artista' ? artistaHTML()
     : page === 'pendientes' ? pendientesHTML() : page === 'nuevas' ? nuevasHTML() : homeHTML();
@@ -429,7 +444,7 @@ function showSong(song) {
   for (var i = 1; i <= 9; i++) capoOpts += '<option value="' + i + '">Traste ' + i + '</option>';
   view.innerHTML =
     '<div class="shead"><div class="sh-t">' + (safeCover(song.cover) ? '<img class="cover" src="' + esc(song.cover) + '" alt="Carátula de ' + esc(song.album || song.title) + '" referrerpolicy="no-referrer">' : '') +
-    '<div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([song.artist, albumLine(song)].filter(Boolean).join(' · ')) + '</p></div></div>' +
+    '<div><h1>' + esc(song.title) + '</h1><p class="meta">' + esc([artistLabel(song), albumLine(song)].filter(Boolean).join(' · ')) + '</p></div></div>' +
     '<div class="actions"><button class="btn" data-act="back">Biblioteca</button><button class="btn" data-act="share">Copiar enlace</button><button class="btn" data-act="print">Imprimir</button><button class="btn" data-act="export">Exportar</button>' + (editable() ? '<button class="btn primary" data-act="edit">Editar</button>' : '') + '</div></div>' +
     '<div class="controls" id="controls">' +
       '<div class="grp"><span class="lab">Transponer</span><button class="btn sq" data-act="tm" aria-label="Bajar un semitono">−</button><output id="tval">0</output><button class="btn sq" data-act="tp" aria-label="Subir un semitono">+</button><button class="btn" data-act="t0">Original</button></div>' +
@@ -472,7 +487,7 @@ function renderPrint() {
     meta = '<div class="sh-meta">' + lines.map(function (l) { return '<p>' + l + '</p>'; }).join('') + '</div>';
   }
   var head = '<header class="sh-head">' + (PR.meta && safeCover(song.cover) ? '<img class="cover" src="' + esc(song.cover) + '" alt="" referrerpolicy="no-referrer">' : '') +
-    '<div><h1>' + esc(song.title) + '</h1>' + (song.artist ? '<p class="sh-art">' + esc(song.artist) + '</p>' : '') + meta + '</div></header>';
+    '<div><h1>' + esc(song.title) + '</h1>' + (artistLabel(song) ? '<p class="sh-art">' + esc(artistLabel(song)) + '</p>' : '') + meta + '</div></header>';
   var dg = PR.dg ? '<div class="dgs pdg">' + stripHTML(song, ctx, true) + '</div>' : '';
   var opts = '<aside class="opts" aria-label="Opciones de impresión"><div class="opt-card">' +
     '<label class="opt"><span>Tamaño del papel</span><select id="prPaper"><option value="letter"' + (PR.paper === 'letter' ? ' selected' : '') + '>Carta</option><option value="a4"' + (PR.paper === 'a4' ? ' selected' : '') + '>A4</option></select></label>' +
@@ -575,7 +590,7 @@ function openEditor(id, review) {
       '<div class="revimg" id="revImg">' + review.crops.map(function (c) { return '<img src="' + esc(c) + '" alt="Foto de la canción">'; }).join('') + '</div></aside>' : '') +
     '<form class="form" id="edForm" autocomplete="off">' +
       '<label class="f">Título<input type="text" id="fTitle"></label>' +
-      '<div class="row3"><label class="f">Artista<input type="text" id="fArtist"></label>' +
+      '<div class="row3"><label class="f">Artista<input type="text" id="fArtist" placeholder="Varios: Silvio Rodríguez; Piero"></label>' +
         '<label class="f">Tonalidad<input type="text" id="fKey" placeholder="Am, G, Bb"></label>' +
         '<label class="f">Estado<select id="fStatus">' + stOpts + '</select></label></div>' +
       '<label class="f">Afinación o cejilla de la fuente<textarea id="fTuning" rows="2" spellcheck="false"></textarea></label>' +
@@ -685,7 +700,7 @@ function findAlbum() {
   if (!api.searchAlbum) { msg.textContent = 'La búsqueda no está disponible.'; return; }
   if (!d.title.trim()) { msg.textContent = 'Escribe primero el título.'; return; }
   msg.textContent = 'Buscando…'; res.hidden = true;
-  api.searchAlbum({ title: d.title, artist: d.artist }).then(function (list) {
+  api.searchAlbum({ title: d.title, artist: artistParts(d.artist)[0] || '' }).then(function (list) {
     if (S.view !== 'edit') return;
     S.albumRes = list;
     if (!list.length) { msg.textContent = 'No encontré nada. Prueba con otro título o escribe los datos a mano.'; return; }
