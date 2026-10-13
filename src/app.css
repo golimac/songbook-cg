@@ -143,6 +143,16 @@
   /* Canción: la letra y, al lado, el panel de acordes. Todo baja con un solo scroll. */
   .songgrid { @apply grid gap-x-10; grid-template-columns: minmax(0, 1fr); }
   .songgrid > .dgs::before { content: 'Acordes'; @apply w-full font-display font-semibold text-lg text-ink mb-1; grid-column: 1 / -1; }
+  @media (min-width: 768px) and (max-width: 959px) {
+    .songgrid { grid-template-columns: minmax(0, 1fr) 236px; column-gap: 24px; align-items: start; }
+    .songgrid:has(#dgStrip[hidden]) { grid-template-columns: minmax(0, 1fr); }
+    .songgrid > .dgs { @apply content-start my-2 pl-5 border-l border-rule; display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; justify-content: start; grid-column: 2; grid-row: 1; align-self: start; }
+    .songgrid > .dgs.fit { @apply sticky; }
+    .songgrid > .dgs .dg { @apply w-16 text-[11px] rounded-lg px-0; }
+    .songgrid > .dgs .dg svg { @apply w-[58px]; }
+    .songgrid > .dgs .dg b { @apply text-xs; }
+    .songgrid > .song { grid-column: 1; grid-row: 1; }
+  }
   @media (min-width: 960px) {
     .songgrid { grid-template-columns: minmax(0, 660px) 300px; align-items: start; justify-content: start; }
     .songgrid:has(#dgStrip[hidden]) { grid-template-columns: minmax(0, 880px); }
@@ -158,11 +168,11 @@
   .song { @apply font-mono mt-2; font-size: var(--fs, 13px); line-height: 1.35; }
   .ln { @apply flex flex-wrap items-end mt-[.5em]; }
   .seg { @apply inline-flex flex-col min-w-0; }
-  .seg .c { @apply font-semibold text-chord pr-[.45em] min-h-[1.5em] leading-normal whitespace-pre; font-size: .75em; }
+  .seg .c { @apply font-semibold text-chord pr-[.5em] min-h-[1.5em] leading-normal whitespace-pre; font-size: .85em; }
   .seg .t { @apply whitespace-pre-wrap min-w-0 [overflow-wrap:anywhere]; min-height: 1.35em; }
   .cl { @apply mt-[.55em] whitespace-pre-wrap; }
   .cl .lab { @apply font-sans text-[11px] uppercase tracking-wider mr-[.6em]; }
-  .ch { @apply font-semibold text-chord; font-size: .85em; }
+  .ch { @apply font-semibold text-chord; font-size: .95em; }
   .sp { @apply text-mute; }
   .fig { @apply text-mute border border-dashed border-rule rounded px-[.3em]; font-size: .8em; }
   .doubt { @apply bg-doubt text-doubt-ink rounded-[3px] px-[.25em]; }
@@ -191,7 +201,7 @@
   .form .actions { @apply pt-4 border-t border-rule; }
   .pv { @apply min-w-0 border border-rule rounded-2xl bg-card px-4 py-3.5 self-start; }
   @media (min-width: 900px) { .pv { @apply sticky overflow-auto; top: calc(var(--hh) + 12px); max-height: calc(100vh - var(--hh) - 24px); } }
-  .pv .song { font-size: 13px; }
+  .pv .song { font-size: 14px; }
   .pv .dgs { @apply gap-1.5; }
   .pv .dg { @apply w-16 text-[11px] rounded-lg; }
   .pv .dg svg { @apply w-11 h-auto; }

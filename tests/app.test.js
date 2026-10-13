@@ -85,7 +85,7 @@ const capo = $('#capo'); capo.value = '3'; capo.dispatchEvent(new w.Event('chang
 ok('cejilla 3: G suena como E', chordsOf().includes('E') && /formas en E/.test($('#info').textContent));
 click($('[data-act="t0"]'));
 click($('[data-act="fp"]'));
-ok('A+ sube el tamaño', $('#songBody').style.getPropertyValue('--fs') === '14px');
+ok('A+ sube el tamaño', $('#songBody').style.getPropertyValue('--fs') === '17px');
 const tg = $('#dgToggle'); tg.checked = false; tg.dispatchEvent(new w.Event('change', { bubbles: true }));
 ok('ocultar diagramas', $('#dgStrip').hidden === true);
 tg.checked = true; tg.dispatchEvent(new w.Event('change', { bubbles: true }));

@@ -37,7 +37,7 @@ var SAMPLES = [
 var songs = [];            // datos livianos de la lista, en vivo desde Firestore
 var listLoaded = false;
 var user = null, unsub = null, denied = false;
-var S = { view: 'library', id: null, song: null, shift: 0, capo: 0, fs: 13, dg: true, auto: false, dur: 150, q: '', draft: null, isNew: false, pos: {}, review: null, revI: 0 };
+var S = { view: 'library', id: null, song: null, shift: 0, capo: 0, fs: 16, dg: true, auto: false, dur: 150, q: '', draft: null, isNew: false, pos: {}, review: null, revI: 0 };
 var view = $('#view');
 function editable() { return !!user; }
 function cur() { return S.view === 'edit' ? S.draft : S.song; }
