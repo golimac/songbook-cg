@@ -43,7 +43,7 @@ w.Element.prototype.scrollIntoView = function () { w.__scrolledTo = this.id; };
 ok('la portada resume el total en la cabecera', /30 canciones/.test($('.hero').textContent));
 ok('las cajas muestran hasta 7 filas y "Ver más"', ['b-new', 'b-pend', 'b-todas'].every((c) => $$('.' + c + ' .mini').length === 7) && $$('.b-art .mini').length === 6 && ['nuevas', 'pendientes', 'todas', 'artistas'].every((p) => /Ver más/.test($('[data-lib="' + p + '"]').textContent)));
 ok('Pendientes anuncia 28 por revisar', /28 por revisar/.test($('.b-pend header').textContent));
-ok('Nuevas muestra hace cuánto se subió cada una', /hace/.test($('.b-new .mini .mi-m').textContent));
+ok('Nuevas muestra la tonalidad y no el tiempo', !/hace/.test($('.b-new').textContent) && $$('.b-new .mini .mi-m').some((n) => /^[A-G][#b]?m?/.test(n.textContent)));
 click($('[data-lib="nuevas"]'));
 ok('Ver más de Nuevas lista todas, la más reciente primero', /Nuevas30/.test($('.crumb h1').textContent) && $$('.item').length === 30);
 click($('[data-lib="home"]'));

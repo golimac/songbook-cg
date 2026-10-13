@@ -329,7 +329,7 @@ function homeHTML() {
           '<span class="vc-sub">' + esc(artistLabel(s)) + '</span>' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') + '</button>';
       }).join('') + '</div>' : '<p class="bx-e">Aquí quedan las últimas canciones que abras en este dispositivo.</p>') + '</section>' +
     '<div class="boxes">' +
-      homeBox('b-new', 'Nuevas', '', IC.new, nuevas.slice(0, HOME_N).map(function (s) { return miniSong(s, ago(stamp(s))); }).join(''), 'nuevas', '') +
+      homeBox('b-new', 'Nuevas', '', IC.new, nuevas.slice(0, HOME_N).map(function (s) { return miniSong(s, parseKey(s.key) ? s.key : ''); }).join(''), 'nuevas', '') +
       (editable() && pendList.length ? homeBox('b-pend', 'Pendientes', pendList.length + ' por revisar', IC.pend, pendList.slice(0, HOME_N).map(function (s) { return miniSong(s, parseKey(s.key) ? s.key : ''); }).join(''), pendList.length > HOME_N ? 'pendientes' : '', '') : '') +
       homeBox('b-todas', 'Todas', plural(songs.length, 'canción', 'canciones'), IC.todas, songs.slice().sort(byTitle).slice(0, HOME_N).map(function (s) { return miniSong(s, parseKey(s.key) ? s.key : ''); }).join(''), 'todas', '') +
       homeBox('b-art', 'Artistas', plural(names.length, 'artista', 'artistas'), IC.art, top.slice(0, HOME_N).map(function (a) {
