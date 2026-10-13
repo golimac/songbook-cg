@@ -145,7 +145,7 @@
   .ln { @apply flex flex-wrap items-end mt-[.5em]; }
   .seg { @apply inline-flex flex-col min-w-0; }
   .seg .c { @apply font-semibold text-chord pr-[.45em] min-h-[1.5em] leading-normal whitespace-pre; font-size: .75em; }
-  .seg .t { @apply whitespace-pre-wrap min-w-0 [overflow-wrap:anywhere]; }
+  .seg .t { @apply whitespace-pre-wrap min-w-0 [overflow-wrap:anywhere]; min-height: 1.35em; }
   .cl { @apply mt-[.55em] whitespace-pre-wrap; }
   .cl .lab { @apply font-sans text-[11px] uppercase tracking-wider mr-[.6em]; }
   .ch { @apply font-semibold text-chord; font-size: .85em; }
