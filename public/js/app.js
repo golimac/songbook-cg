@@ -236,7 +236,7 @@ function letterOf(t) { var c = norm(t).replace(/[^a-z0-9]/g, '').charAt(0).toUpp
 /* Varios artistas se separan con ";": cada uno cuenta aparte en el índice de Artistas. */
 function artistParts(str) { return String(str || '').split(';').map(function (x) { return x.trim(); }).filter(Boolean); }
 function artistsOf(s) { var p = artistParts(s.artist); return p.length ? p : ['Sin artista']; }
-function artistLabel(s) { var p = artistParts(s.artist); return p.length > 1 ? p.slice(0, -1).join(', ') + ' y ' + p[p.length - 1] : p[0] || ''; }
+function artistLabel(s) { return artistParts(s.artist).join('; '); }
 function artistGroups() { var m = artistIndex(), by = {}; Object.keys(m).forEach(function (k) { by[m[k].name] = m[k].songs; }); return by; }
 function hasArtist(s, name) { var k = norm(name); return artistsOf(s).some(function (a) { return norm(a) === k; }); }
 function artistIndex() {

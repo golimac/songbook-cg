@@ -62,10 +62,10 @@ const names = $$('.artist span').map((x) => x.textContent);
 ok('cada artista separado por ; cuenta aparte, sin repetidos por mayúsculas o tildes', names.includes('Piero') && names.includes('Silvio Rodríguez') && !names.some((n) => /;/.test(n)) && names.filter((n) => /silvio/i.test(n)).length === 1);
 ok('Silvio suma sus dos canciones y Piero la suya', $$('.artist').find((a) => /Silvio/.test(a.textContent)).querySelector('i').textContent === '2' && $$('.artist').find((a) => /Piero/.test(a.textContent)).querySelector('i').textContent === '1');
 click($$('.artist').find((a) => /Piero/.test(a.textContent)));
-ok('la página de Piero lista el dueto y lo escribe con "y"', $$('.item').length === 1 && /Dueto/.test($('.item').textContent) && /Silvio Rodríguez y Piero/.test($('.item').textContent));
+ok('la página de Piero lista el dueto y lo escribe con punto y coma', $$('.item').length === 1 && /Dueto/.test($('.item').textContent) && /Silvio Rodríguez; Piero/.test($('.item').textContent));
 click($('#goHome'));
 click($('[data-lib="todas"]'));
-ok('tres artistas se leen "A, B y C"', $$('.item').some((i) => /Ana, Beto y Carlos/.test(i.textContent)));
+ok('tres artistas se leen "A; B; C"', $$('.item').some((i) => /Ana; Beto; Carlos/.test(i.textContent)));
 click($('#goHome'));
 click($('[data-open="s1"]')); await wait();
 
