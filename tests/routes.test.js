@@ -27,7 +27,7 @@ const api = {
   onAuth(cb) { authCb = cb; cb(null); return () => {}; },
   async signIn() { authCb({ uid: 'u', email: 'yo@example.test' }); }, async signOut() { authCb(null); },
   subscribeSongs(ok2) { setTimeout(() => ok2(list.map((s) => ({ ...s }))), 0); return () => {}; },
-  async getBody() { return { body: '{c: Afinar un tono más bajo}\n[G]Hola', diagrams: {} }; },
+  async getBody(id) { return { body: (id === 's3' ? '' : '{c: Afinar un tono más bajo}\n') + '[G]Hola', diagrams: {} }; },
   saveSong() { return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
 };
 start(api); await wait(30);
@@ -39,6 +39,7 @@ click($('[data-act="back"]'));
 ok('volver a la biblioteca cambia la dirección a /', w.location.pathname === '/' && !!$('.hero') && d.title === 'Songbook CG');
 go('/c/s3'); await wait(20);
 ok('el historial abre otra canción', !!$('#songBody') && /Otra/.test($('h1').textContent));
+ok('sin nota en la letra no sale la línea de nota', !/Nota:/.test($('#info').textContent));
 go('/'); await wait();
 ok('y vuelve a la biblioteca', !!$('.hero'));
 go('/c/s2'); await wait();

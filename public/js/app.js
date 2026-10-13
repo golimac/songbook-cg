@@ -457,10 +457,9 @@ function refreshSong() {
       (S.capo ? ' · cejilla en el traste ' + S.capo + ', formas en <b>' + esc(keyName(ctx.key, ctx.ss)) + '</b>' : '') +
       (ctx.inferred ? ' · tonalidad tomada del primer acorde' : '') + '</p>';
   } else info += '<p class="info">La canción no tiene tonalidad definida.</p>';
-  /* La nota de afinación o cejilla va bajo la tonalidad: la del inicio de la letra o, si no hay, el campo de afinación. */
+  /* La nota de afinación o cejilla va bajo la tonalidad: la del inicio de la letra; sin nota, no sale nada. */
   var notes = [];
   while (ctx.blocks.length && ctx.blocks[0].type === 'note') notes.push(ctx.blocks.shift().text);
-  if (!notes.length && String(song.tuning || '').trim()) notes.push(String(song.tuning).trim());
   if (notes.length) info += '<p class="info">Nota: <i>' + esc(notes.join(' · ').replace(/\s+/g, ' ')) + '</i></p>';
   var n = countDoubts(ctx.blocks);
   if (n) info += '<div class="banner warn">' + n + (n === 1 ? ' marca por revisar, resaltada' : ' marcas por revisar, resaltadas') + ' en ámbar. Se corrigen en el editor.</div>';
