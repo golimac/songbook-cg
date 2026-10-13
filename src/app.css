@@ -130,6 +130,7 @@
   .seenbox { @apply mb-4; }
   .boxes { @apply grid gap-4; grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 768px) { .boxes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 768px) { .boxes > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
   .bx-l { @apply grid; }
   .mini { @apply flex items-center gap-3 text-left w-full px-2 py-1.5 -mx-2 rounded-lg bg-transparent border-0 transition-colors; width: calc(100% + 1rem); }
   .mini:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); }
@@ -144,7 +145,6 @@
   .sfoot { @apply mt-12 -mx-4 px-4 py-6 border-t border-rule text-xs text-mute; }
   .sfoot .wrap { @apply flex flex-wrap items-center gap-x-4 gap-y-1; }
   .sf-logo { @apply font-logo text-lg tracking-[.07em] text-brass; }
-  .sf-r { @apply sm:ml-auto; }
   .tg svg { @apply w-[17px] h-[17px]; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .tg .ic-sun { display: none; }
   :root[data-theme="dark"] .tg .ic-sun { display: block; }

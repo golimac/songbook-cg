@@ -197,9 +197,12 @@ click($('#edDel')); ok('primer clic pide confirmar', /Confirmar/.test($('#edDel'
 click($('#edDel')); ok('segundo clic elimina', $$('.item').length === 2 && api.metas.size === 2 && api.bodies.size === 2);
 
 // ---- salir: de vuelta al modo invitado ----
+for (const [id, m] of api.metas) m.status = /Luz de enero/.test(m.title) ? 'revisada' : 'pendiente';
 click($('#signOut')); await wait();
+ok('invitado no ve pendientes en la portada', !$('.b-pend') && !/Pendientes|por revisar/.test($('#lib').textContent) && !$('[data-lib="pendientes"]'));
 click($('[data-lib="todas"]'));
-ok('salir deja la biblioteca visible y oculta los controles', !!$('#q') && $$('.item').length === 2 && $('#newSong').hidden === true && $('#who').hidden === true && $('#signInTop').hidden === false);
+ok('invitado solo ve las revisadas y sin chips de estado', $$('.item').length === 1 && !$('.item .chip.warn') && !/Revisada|Pendiente/.test($('.item').textContent));
+ok('salir deja la biblioteca visible y oculta los controles', !!$('#q') && $$('.item').length === 1 && $('#newSong').hidden === true && $('#who').hidden === true && $('#signInTop').hidden === false);
 click($$('.item').find((i) => /Luz de enero/.test(i.textContent))); await wait();
 ok('invitado abre la canción y no ve Editar', !!$('#songBody') && !$('[data-act="edit"]') && !!$('[data-act="export"]'));
 const g0 = [...$$('#songBody .seg .c')].map((c) => c.textContent.trim()).filter(Boolean);

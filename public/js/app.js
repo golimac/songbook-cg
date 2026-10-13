@@ -188,8 +188,8 @@ function songItem(s, sub) {
   var st = STATUS[s.status] || STATUS.pendiente;
   return '<button class="item" data-open="' + esc(s.id) + '"><span class="it-title">' + esc(s.title) + '</span>' +
     '<span class="it-chips">' + (parseKey(s.key) ? '<span class="chip">' + esc(s.key) + '</span>' : '') +
-    (n ? '<span class="chip warn">' + n + (n === 1 ? ' duda' : ' dudas') + '</span>' : '') +
-    '<span class="chip ' + st[1] + '">' + st[0] + '</span></span>' +
+    (editable() ? (n ? '<span class="chip warn">' + n + (n === 1 ? ' duda' : ' dudas') + '</span>' : '') +
+    '<span class="chip ' + st[1] + '">' + st[0] + '</span>' : '') + '</span>' +
     (sub ? '<span class="it-sub">' + esc(sub) + '</span>' : '') + '</button>';
 }
 /* Versiones de una misma canción (mismo título y artista) quedan juntas en un marco */
@@ -275,7 +275,7 @@ function homeHTML() {
       }).join('') + '</div>' : '<p class="bx-e">Aquí quedan las últimas canciones que abras en este dispositivo.</p>') + '</section>' +
     '<div class="boxes">' +
       homeBox('b-new', 'Nuevas', '', IC.new, nuevas.slice(0, HOME_N).map(function (s) { return miniSong(s, ago(stamp(s))); }).join(''), 'nuevas', '') +
-      homeBox('b-pend', 'Pendientes', pendList.length + ' por revisar', IC.pend, pendList.slice(0, HOME_N).map(function (s) { return miniSong(s, parseKey(s.key) ? s.key : ''); }).join(''), pendList.length > HOME_N ? 'pendientes' : '', 'Todo revisado. Buen trabajo.') +
+      (editable() && pendList.length ? homeBox('b-pend', 'Pendientes', pendList.length + ' por revisar', IC.pend, pendList.slice(0, HOME_N).map(function (s) { return miniSong(s, parseKey(s.key) ? s.key : ''); }).join(''), pendList.length > HOME_N ? 'pendientes' : '', '') : '') +
       homeBox('b-todas', 'Todas', plural(songs.length, 'canción', 'canciones'), IC.todas, songs.slice().sort(byTitle).slice(0, HOME_N).map(function (s) { return miniSong(s, parseKey(s.key) ? s.key : ''); }).join(''), 'todas', '') +
       homeBox('b-art', 'Artistas', plural(names.length, 'artista', 'artistas'), IC.art, top.slice(0, HOME_N).map(function (a) {
         return '<button type="button" class="mini" data-artist="' + esc(a) + '">' + avatar(a) + '<span class="mi-t"><b>' + esc(a) + '</b></span><span class="mi-m">' + plural(by[a].length, 'canción', 'canciones') + '</span></button>';
@@ -334,6 +334,7 @@ function fillList() {
       : '<div class="empty"><p>La biblioteca está vacía.</p></div>';
     return;
   }
+  if (LIB.page === 'pendientes' && !editable()) LIB.page = 'home';
   var page = LIB.page === 'artista' && !songs.some(function (s) { return artistName(s) === LIB.artist; }) ? 'artistas' : LIB.page;
   box.innerHTML = S.q.trim() ? resultsHTML(S.q)
     : page === 'todas' ? todasHTML() : page === 'artistas' ? artistasHTML() : page === 'artista' ? artistaHTML()
@@ -366,7 +367,7 @@ function applyAuth(u) {
   $('#signOut').hidden = !on; $('#newSong').hidden = !on; $('#importBtn').hidden = !on; $('#signInTop').hidden = on;
   renderLibrary();
   unsub = api.subscribeSongs(function (list) {
-    songs = list; listLoaded = true;
+    songs = user ? list : list.filter(function (s) { return s.status === 'revisada'; }); listLoaded = true;
     fillList();
   }, function (e) {
     denied = true; songs = []; listLoaded = true;
