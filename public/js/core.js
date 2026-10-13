@@ -78,6 +78,13 @@ function tokenizeLine(str) {
   return out;
 }
 
+/* Un acorde de letra puede traer una sucesión rápida entre paréntesis: [C (C4-C-G7-C)]. Devuelve sus fichas, o null si es un acorde común. */
+function segTokens(str) {
+  if (str == null || str.indexOf('(') < 0 || parseChord(str)) return null;
+  var toks = tokenizeLine(str), has = false;
+  walkTokens(toks, function (t) { if (t.type === 'chord') has = true; });
+  return has ? toks : null;
+}
 function parseLyricLine(line) {
   var parts = line.split(/\[([^\]]*)\]/);
   var segs = [];
@@ -136,7 +143,12 @@ function collectChords(blocks) {
     if (!seen[k]) { seen[k] = 1; list.push({ orig: k, chord: Object.assign({}, c, { doubt: false }) }); }
   }
   blocks.forEach(function (b) {
-    if (b.type === 'lyric') b.segs.forEach(function (s) { if (s.chord != null) { var c = parseChord(s.chord); if (c) add(c); } });
+    if (b.type === 'lyric') b.segs.forEach(function (s) {
+      if (s.chord == null) return;
+      var st = segTokens(s.chord);
+      if (st) walkTokens(st, function (t) { if (t.type === 'chord') add(t.chord); });
+      else { var c = parseChord(s.chord); if (c) add(c); }
+    });
     else if (b.type === 'chords') walkTokens(b.tokens, function (t) { if (t.type === 'chord') add(t.chord); });
   });
   return list;
@@ -144,7 +156,12 @@ function collectChords(blocks) {
 function countDoubts(blocks) {
   var n = 0;
   blocks.forEach(function (b) {
-    if (b.type === 'lyric') b.segs.forEach(function (s) { if (s.chord != null) { var c = parseChord(s.chord); if (!c || c.doubt) n++; } });
+    if (b.type === 'lyric') b.segs.forEach(function (s) {
+      if (s.chord == null) return;
+      var st = segTokens(s.chord);
+      if (st) walkTokens(st, function (t) { if (t.type === 'doubt' || (t.type === 'chord' && t.chord.doubt) || (t.type === 'fig' && t.incomplete)) n++; });
+      else { var c = parseChord(s.chord); if (!c || c.doubt) n++; }
+    });
     else if (b.type === 'chords') walkTokens(b.tokens, function (t) {
       if (t.type === 'doubt' || (t.type === 'chord' && t.chord.doubt) || (t.type === 'fig' && t.incomplete)) n++;
     });
@@ -155,6 +172,7 @@ function hasUntransposable(blocks) {
   var f = false;
   blocks.forEach(function (b) {
     if (b.type === 'tab') f = true;
+    else if (b.type === 'lyric') b.segs.forEach(function (s) { var st = s.chord != null && segTokens(s.chord); if (st) walkTokens(st, function (t) { if (t.type === 'fig') f = true; }); });
     else if (b.type === 'chords') walkTokens(b.tokens, function (t) { if (t.type === 'fig') f = true; });
   });
   return f;
@@ -379,6 +397,6 @@ function listDoubts(body) {
 
 export {
   parseChord, chordToString, chordPc, transposeChord, parseKey, flatsFor, keyName,
-  tokenizeLine, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
+  tokenizeLine, segTokens, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
   shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts
 };

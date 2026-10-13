@@ -1,6 +1,6 @@
 import {
   parseChord, chordToString, transposeChord, parseKey, flatsFor, keyName, parseBody, collectChords,
-  countDoubts, hasUntransposable, inferKey, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts
+  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts
 } from './core.js';
 import { imaging as realImaging } from './photo.js';
 import { createImporter } from './import.js';
@@ -81,8 +81,9 @@ function lyricHTML(b, ctx) {
   return '<div class="ln">' + b.segs.map(function (s) {
     var c;
     if (s.chord != null) {
-      var p = parseChord(s.chord);
-      c = p ? '<span class="c' + (p.doubt ? ' doubt' : '') + '"' + chAttr(p) + '>' + esc(dc(p, ctx)) + '</span>'
+      var p = parseChord(s.chord), st = p ? null : segTokens(s.chord);
+      if (st) c = '<span class="c cs">' + tokHTML(st, ctx) + '</span>';
+      else c = p ? '<span class="c' + (p.doubt ? ' doubt' : '') + '"' + chAttr(p) + '>' + esc(dc(p, ctx)) + '</span>'
             : '<span class="c doubt" title="Lectura dudosa">' + esc(s.chord) + '</span>';
     } else c = '<span class="c"> </span>';
     return '<span class="seg">' + c + '<span class="t">' + esc(s.text) + '</span></span>';
@@ -601,7 +602,7 @@ function openEditor(id, review) {
         '<div class="alres" id="alRes" hidden></div></div></div>' +
       '<label class="f">Letra y acordes<textarea id="fBody" spellcheck="false"></textarea></label>' +
       '<details class="syntax"><summary>Cómo se escribe</summary><ul>' +
-        '<li><code>[Am]</code> pone el acorde sobre la sílaba que sigue.</li>' +
+        '<li><code>[Am]</code> pone el acorde sobre la sílaba que sigue. Una sucesión rápida va entre paréntesis dentro de los corchetes: <code>[C (C4-C-G7-C)]</code>.</li>' +
         '<li><code>&gt; G D Em</code> escribe una línea solo de acordes.</li>' +
         '<li><code>{intro: G - D (50-60-62)}</code> escribe la introducción. Cada grupo entre paréntesis es cuerda y traste, y no se transpone.</li>' +
         '<li><code>{c: texto}</code> agrega una nota.</li>' +

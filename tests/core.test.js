@@ -147,6 +147,13 @@ eq('dudas: cantidad y tipos', dl.map((x) => x.kind + ':' + x.text), ['ilegible:S
 eq('dudas: posiciones apuntan al texto', dl.every((x) => bd.slice(x.start, x.end) === x.text), true);
 eq('dudas: coincide con el contador', dl.length, C.countDoubts(C.parseBody(bd)));
 
+// Sucesión rápida dentro de un acorde de letra
+const sq = C.parseBody('[C (C4-C-G7-C)]hola');
+eq('sucesión rápida: acordes para diagramas', C.collectChords(sq).map((x) => x.orig).join(), 'C,C4,G7');
+eq('sucesión rápida: sin dudas', C.countDoubts(sq), 0);
+eq('sucesión rápida con un acorde ilegible cuenta una duda', C.countDoubts(C.parseBody('[C (Zz-C)]hola')), 1);
+eq('un acorde común no se toma por sucesión', C.segTokens('Am'), null);
+
 // ChordPro
 const cp = C.toChordPro({ title: 'Prueba', artist: 'X', key: 'Am', body: '{intro: Am - F}\n[Am]hola [F]mundo\n> G D' });
 const cp2 = C.toChordPro({ title: 'T', album: 'Disco', year: '1975', body: '' });
