@@ -155,6 +155,9 @@
   :root[data-theme="dark"] .tg .ic-sun { display: block; }
   :root[data-theme="dark"] .tg .ic-moon { display: none; }
   .chadd { @apply flex items-end gap-3 flex-wrap mb-5; }
+  .chadd .chscan { @apply ml-auto; }
+  .chprog:empty { display: none; }
+  .chprog { @apply -mt-2 mb-4; }
   .chadd .f { @apply flex-1; min-width: 220px; max-width: 360px; }
   .chgrid { @apply grid gap-4; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   .chlink { @apply flex flex-row items-center gap-3 w-full text-left cursor-pointer py-3; grid-column: 1 / -1; }

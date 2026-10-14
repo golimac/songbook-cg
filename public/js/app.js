@@ -378,8 +378,9 @@ function acordesHTML() {
   var names = chordNames();
   var h = crumb(['home', 'Inicio'], 'Biblioteca de acordes', names.length);
   h += '<form class="chadd" id="chAdd"><label class="f">Buscar acorde<input type="text" id="chName" autocomplete="off" placeholder="Por ejemplo Am7, C4 o C/G" value="' + esc(LIB.chord || '') + '"></label>' +
-    '<button class="btn primary" type="submit">Ver posiciones</button><span class="hint" id="chMsg" role="status"></span></form>' +
-    (editable() ? '<p class="hint"><button type="button" class="btn" id="chScan">Traer los diagramas de mis canciones</button> <span id="chProg" role="status"></span></p>' : '');
+    '<button class="btn primary" type="submit">Ver posiciones</button><span class="hint" id="chMsg" role="status"></span>' +
+    (editable() ? '<button type="button" class="btn chscan" id="chScan" title="Revisa tus canciones y trae a la biblioteca los diagramas que dibujaste en ellas">Traer diagramas</button>' : '') + '</form>' +
+    (editable() ? '<p class="hint chprog" id="chProg" role="status"></p>' : '');
   if (LIB.chord) h += chordDetailHTML(LIB.chord);
   return h + '<div class="chgrid">' + names.map(function (n) {
     var list = curShapes(libKey(n));
