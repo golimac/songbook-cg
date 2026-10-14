@@ -888,7 +888,14 @@ function openDgLib(name, idx) {
 function saveLibShape(out) {
   var n = dgLib.name, shapes = curShapes(n), f = out.frets.join(',');
   var dup = shapes.some(function (x, i) { return i !== dgLib.idx && x.frets.join(',') === f; });
-  if (dup) { toast('Esa posición ya está en la lista de ' + n + '.', true); return false; }
+  if (dup && dgLib.idx != null) { toast('Esa posición ya está en la lista de ' + n + '.', true); return false; }
+  if (dup) {
+    /* Agregar una posición que el acorde ya tiene: la lista queda guardada en la biblioteca y no se repite la forma */
+    chordLib[n] = shapes; onChords();
+    api.saveChord(n, shapes).catch(failSave);
+    toast('Esa posición ya estaba en ' + n + '. El acorde quedó en la biblioteca.');
+    return true;
+  }
   if (dgLib.idx != null) shapes[dgLib.idx] = out; else shapes.push(out);
   chordLib[n] = shapes; onChords();
   api.saveChord(n, shapes).catch(failSave);

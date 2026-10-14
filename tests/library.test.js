@@ -144,7 +144,7 @@ click($('[data-chdel="Am7"][data-i="0"]'));
 ok('Quitar una posición del catálogo guarda la lista completa menos esa', saved.length === 1 && saved[0][0] === 'Am7' && saved[0][1].length === nAm7 - 1 && $$('#chdet figure').length === nAm7 - 1);
 click($('[data-chadd="Am7"]'));
 click($('#dgSave'));
-ok('una posición ya existente en la lista se avisa y no se guarda', saved.length === 1 && !$('#dgModal').hidden && !!$('.toast.err'));
+ok('agregar una posición que ya existe guarda la lista sin repetirla y cierra', saved.length === 2 && saved[1][0] === 'Am7' && saved[1][1].length === nAm7 - 1 && $('#dgModal').hidden && !$('.toast.err'));
 click($('#dgCancel'));
 ok('aparece el botón para volver a las originales', !!$('[data-chreset="Am7"]'));
 click($('[data-chreset="Am7"]'));
