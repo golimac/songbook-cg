@@ -129,6 +129,9 @@ ok('la página muestra buscador y la lista completa del catálogo', !!$('#chAdd'
 $('#chName').value = 'Cm';
 $('#chName').dispatchEvent(new w.Event('input', { bubbles: true }));
 ok('escribir filtra la lista en vivo', $$('.chcard').filter((c) => !c.hidden).length >= 1 && $$('.chcard').filter((c) => !c.hidden).every((c) => /^cm/.test(c.getAttribute('data-n'))));
+$('#chName').value = 'C4';
+$('#chName').dispatchEvent(new w.Event('input', { bubbles: true }));
+ok('escribir C4 encuentra la tarjeta de Csus4 (mismo acorde, otra escritura)', $$('.chcard').filter((c) => !c.hidden).some((c) => c.querySelector('h3').textContent === 'Csus4'));
 $('#chName').value = 'zzz';
 $('#chAdd').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 ok('un nombre que no es acorde se avisa', /No reconozco/.test($('#chMsg').textContent) && $('#dgModal').hidden);

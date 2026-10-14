@@ -339,6 +339,11 @@ function chordNames() {
   });
 }
 function chordPcOf(c) { var k = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[c.root] + (c.acc === '#' ? 1 : c.acc === 'b' ? -1 : 0); return (k + 12) % 12; }
+/* Identidad de un acorde sin importar cómo se escriba (A4 = Asus4, C+ = Caug, D/A = D/A) */
+function eqKey(name) {
+  var c = parseChord(name); if (!c || c.star || c.doubt) return '';
+  return chordPcOf(c) + '|' + catQual(c.qual) + '|' + (c.bass || '');
+}
 function libKey(name) {
   var c = parseChord(name); if (!c) return name;
   var ks = Object.keys(chordLib);
@@ -384,7 +389,7 @@ function acordesHTML() {
   if (LIB.chord) h += chordDetailHTML(LIB.chord);
   return h + '<div class="chgrid">' + names.map(function (n) {
     var list = curShapes(libKey(n));
-    return '<article class="chcard" data-n="' + esc(n.toLowerCase()) + '"><h3><button type="button" class="lnk" data-chsee="' + esc(n) + '">' + esc(n) + '</button></h3><div class="chshapes">' + list.slice(0, 4).map(function (d) {
+    return '<article class="chcard" data-n="' + esc(n.toLowerCase()) + '" data-k="' + esc(eqKey(n)) + '"><h3><button type="button" class="lnk" data-chsee="' + esc(n) + '">' + esc(n) + '</button></h3><div class="chshapes">' + list.slice(0, 4).map(function (d) {
       return '<figure>' + dgSVG(d, 64) + '</figure>';
     }).join('') + (list.length > 4 ? '<span class="hint">+' + (list.length - 4) + ' más</span>' : '') + '</div></article>';
   }).join('') + '</div><p class="bx-e" id="chNone" hidden>Ningún acorde de la lista coincide. Pulsa «Ver posiciones» para abrirlo o agregarlo.</p>';
@@ -1116,8 +1121,11 @@ view.addEventListener('input', function (e) {
   var id = e.target.id;
   if (id === 'dur') { S.dur = parseInt(e.target.value, 10); $('#durv').textContent = fmtDur(S.dur); }
   else if (id === 'chName') {
-    var qv = e.target.value.trim().toLowerCase().replace(/\s+/g, ''), shown = 0;
-    Array.prototype.forEach.call(view.querySelectorAll('.chcard'), function (cd) { var on = !qv || cd.getAttribute('data-n').indexOf(qv) === 0; cd.hidden = !on; if (on) shown++; });
+    var qv = e.target.value.trim().toLowerCase().replace(/\s+/g, ''), shown = 0, qk = eqKey(e.target.value.trim());
+    Array.prototype.forEach.call(view.querySelectorAll('.chcard'), function (cd) {
+      var on = !qv || cd.getAttribute('data-n').indexOf(qv) === 0 || (!!qk && cd.getAttribute('data-k') === qk);
+      cd.hidden = !on; if (on) shown++;
+    });
     var nn = $('#chNone'); if (nn) nn.hidden = !!shown;
     $('#chMsg').textContent = '';
   }
