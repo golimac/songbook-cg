@@ -40,6 +40,7 @@ const api = {
   async signOut() { authCb(null); },
   subscribeSongs(ok2) { listCb = ok2; setTimeout(emit, 0); return () => {}; },
   async getBody(id) { return bodies.get(id) || { body: '', diagrams: {} }; },
+  saveChord() { return Promise.resolve(); }, deleteChord() { return Promise.resolve(); },
   saveSong(s) { const { body, diagrams, id, ...m } = s; metas.set(id, m); bodies.set(id, { body, diagrams }); emit(); return Promise.resolve(); },
   deleteSong() { return Promise.resolve(); },
   saveMany() { return Promise.resolve(); },

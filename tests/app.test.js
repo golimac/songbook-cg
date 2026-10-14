@@ -26,6 +26,7 @@ function mockApi(allowed = true) {
       return () => { listCb = null; };
     },
     async getBody(id) { return bodies.get(id) || { body: '', diagrams: {} }; },
+    saveChord() { return Promise.resolve(); }, deleteChord() { return Promise.resolve(); },
     saveSong(s) {
       api.writes++;
       const { body, diagrams, id, ...meta } = s;

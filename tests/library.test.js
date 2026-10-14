@@ -26,7 +26,7 @@ const api = {
   onAuth(cb) { cb({ uid: 'u', email: 'yo@example.test' }); return () => {}; },
   async signIn() {}, async signOut() {},
   subscribeSongs(ok) { setTimeout(() => ok(list.map((s) => ({ ...s }))), 0); return () => {}; },
-  async getBody() { return { body: '', diagrams: {} }; },
+  async getBody(id) { return { body: id === 'e' ? '[C/A]hola' : '', diagrams: id === 'e' ? { 'C/A': { frets: [-1, 0, 2, 2, 2, 0], base: 1, barre: null }, 'C/B': { frets: [-1, 2, 2, 0, 1, 0], base: 1, barre: null } } : {} }; },
   setSongChords(id, l) { chSaved.push([id, l]); return Promise.resolve(); },
   subscribeChords(ok2) { chordCb = ok2; return () => {}; },
   saveChord(n, sh) { saved.push([n, sh]); return Promise.resolve(); }, deleteChord(n) { saved.push([n, null]); return Promise.resolve(); },
@@ -117,8 +117,11 @@ ok('Pendientes: todo lo que no está revisado', $$('.item').length === 28 && !$$
 click($('[data-lib="home"]'));
 ok('la portada tiene el botón Biblioteca de acordes para el editor', !!$('.b-ch') && /Biblioteca de acordes/.test($('.b-ch').textContent));
 click($('.b-ch'));
-await wait();
-ok('al abrir la biblioteca se completan los acordes de las canciones que no los tenían', chSaved.length > 0);
+for (let i = 0; i < 100 && chSaved.length < list.length; i++) await wait();
+ok('al abrir la biblioteca se completan los acordes de las canciones que no los tenían', chSaved.length === list.length && chSaved.some((x) => x[0] === 'e' && x[1].join() === 'C/A'));
+ok('los diagramas dibujados en las canciones pasan a la biblioteca', saved.some((x) => x[0] === 'C/A' && x[1].length === 1) && saved.some((x) => x[0] === 'C/B'));
+ok('los acordes sin posiciones lo dicen', !$$('.chcard').some((c) => c.querySelector('figure') === null && !/Sin posiciones/.test(c.textContent)));
+saved.length = 0;
 ok('la página muestra buscador y la lista completa del catálogo', !!$('#chAdd') && /Biblioteca de acordes/.test($('.crumb h1').textContent) && $$('.chcard h3').some((h) => h.textContent === 'C') && !/propias/.test($('#lib').textContent));
 $('#chName').value = 'Cm';
 $('#chName').dispatchEvent(new w.Event('input', { bubbles: true }));

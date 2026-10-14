@@ -79,7 +79,7 @@ export function createFirebaseApi() {
       return b.commit();
     },
 
-    setSongChords(id, chords) { return updateDoc(doc(db, 'songs', id), { chords }); },
+    setSongChords(id, chords) { return updateDoc(doc(db, 'songs', id), { chords, libSync: true }); },
 
     deleteSong(id) {
       const b = writeBatch(db);

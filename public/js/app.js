@@ -387,19 +387,37 @@ function acordesHTML() {
     }).join('') + (list.length > 4 ? '<span class="hint">+' + (list.length - 4) + ' más</span>' : '') + '</div></article>';
   }).join('') + '</div><p class="bx-e" id="chNone" hidden>Ningún acorde de la lista coincide. Pulsa «Ver posiciones» para abrirlo o agregarlo.</p>';
 }
+/* Diagramas dibujados dentro de las canciones: pasan a la biblioteca como posiciones de su acorde */
+function harvestDiagrams(list) {
+  var changed = {};
+  list.forEach(function (dg) {
+    Object.keys(dg || {}).forEach(function (orig) {
+      var d = dg[orig], c = parseChord(orig);
+      if (!c || c.star || !d || !d.frets || d.frets.length !== 6) return;
+      var lk = libKey(orig), shapes = changed[lk] || curShapes(lk), f = d.frets.join(',');
+      if (shapes.some(function (x) { return x.frets.join(',') === f; })) return;
+      shapes.push(cpShape(d)); changed[lk] = shapes;
+    });
+  });
+  var ks = Object.keys(changed);
+  ks.forEach(function (k) { chordLib[k] = changed[k]; api.saveChord(k, changed[k]).catch(failSave); });
+  if (ks.length) onChords();
+}
 /* Acordes que usa cada canción: se guardan en la ficha; las que no los tienen se completan una vez */
 function bodyChordNames(body) { return collectChords(parseBody(body || '')).map(function (x) { return x.orig; }); }
 function ensureSongChords() {
   if (!editable() || S.chBusy || !api.setSongChords) return;
-  var miss = songs.filter(function (s) { return !Array.isArray(s.chords); });
+  var miss = songs.filter(function (s) { return !Array.isArray(s.chords) || !s.libSync; });
   if (!miss.length) return;
   S.chBusy = true;
+  var dgs = [];
   (function next(i) {
-    if (i >= miss.length) { S.chBusy = false; if (S.view === 'library' && LIB.page === 'acordes') fillList(); return; }
+    if (i >= miss.length) { S.chBusy = false; harvestDiagrams(dgs); if (S.view === 'library' && LIB.page === 'acordes') fillList(); return; }
     var s = miss[i];
     api.getBody(s.id).then(function (b) {
       var list = bodyChordNames(b && b.body);
-      s.chords = list;
+      s.chords = list; s.libSync = true;
+      if (b && b.diagrams) dgs.push(b.diagrams);
       return api.setSongChords(s.id, list);
     }).then(function () { next(i + 1); }, function () { S.chBusy = false; });
   })(0);
@@ -901,7 +919,7 @@ function renderDg() {
 function closeDg() { $('#dgModal').hidden = true; dgS = null; dgLib = null; $('#dgDel').textContent = 'Quitar el propio'; }
 function afterDg() {
   if (S.view === 'edit') refreshPreview();
-  else { api.saveSong(S.song, false).catch(failSave); refreshSong(); }
+  else { api.saveSong(S.song, false).catch(failSave); harvestDiagrams([S.song.diagrams]); refreshSong(); }
 }
 /* ---------- Exportar ---------- */
 function openExport(song) {
@@ -1111,6 +1129,7 @@ view.addEventListener('submit', function (e) {
   if (!d.title.trim()) d.title = 'Sin título';
   d.doubts = countDoubts(parseBody(d.body));
   d.chords = bodyChordNames(d.body);
+  harvestDiagrams([d.diagrams]);
   if (S.review) {
     if (d.status === 'pendiente') d.status = d.doubts ? 'dudas' : 'revisada';
     api.saveSong(d, true).catch(failSave);

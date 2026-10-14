@@ -32,6 +32,7 @@ const api = {
   subscribeChords(ok2) { setTimeout(() => ok2([{ name: 'Am7', shapes: [{ frets: [-1, 0, 2, 0, 1, 0], base: 1, barre: null }] }]), 0); return () => {}; },
   subscribeSongs(ok2) { setTimeout(() => ok2(list.map((s) => ({ ...s }))), 0); return () => {}; },
   async getBody(id) { const sv = saved.filter((x) => x.id === id).pop(); return { prefs: sv ? sv.prefs : {}, body: id === 's5' ? '{fill: 30,32?,77}\n[C]Hola\n' : (id === 's3' ? '[C (C4-C-G7-C)]Hola [C-F-C]mundo [Zz]raro\n' : '{c: Afinar un tono más bajo}\n') + '[G]Hola', diagrams: {} }; },
+  saveChord() { return Promise.resolve(); }, deleteChord() { return Promise.resolve(); },
   saveSong(s) { saved.push(JSON.parse(JSON.stringify(s))); return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
 };
 start(api); await wait(30);
