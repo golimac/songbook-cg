@@ -102,9 +102,10 @@ click($$('.item').find((i) => /Luz de enero/.test(i.textContent))); await wait()
 ok('banner de dudas (3)', /3 marcas/.test($('#info').textContent));
 ok('Sld7 resaltado', $$('#songBody .doubt').some((x) => x.textContent === 'Sld7'));
 ok('figura incompleta resaltada', $$('#songBody .fig.doubt').length === 1);
-ok('A* con diagrama propio', $$('#dgStrip .dg').some((x) => /A\*/.test(x.textContent) && /propio/.test(x.textContent)));
+ok('el diagrama propio no lleva ninguna palabra extra', !$$('#dgStrip .dg').some((x) => /propio/.test(x.textContent)));
+ok('A* con diagrama propio', $$('#dgStrip .dg').some((x) => /A\*/.test(x.textContent) && x.hasAttribute('data-own')));
 click($('[data-act="tp"]')); click($('[data-act="tp"]'));
-ok('+2: A* pasa a B* con diagrama movido', $$('#dgStrip .dg').some((x) => /B\*/.test(x.textContent) && /propio/.test(x.textContent)));
+ok('+2: A* pasa a B* con diagrama movido', $$('#dgStrip .dg').some((x) => /B\*/.test(x.textContent) && x.hasAttribute('data-own')));
 ok('en transposición no se puede dibujar', $$('#dgStrip [data-edit]').length === 0);
 click($('[data-act="t0"]'));
 
@@ -117,7 +118,7 @@ ok('modal de diagrama abre', $('#dgModal').hidden === false);
 click($$('#dgBig .cell[data-i]').find((c) => c.dataset.i === '5' && c.dataset.r === '2'));
 $('#dgSave').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
 ok('modal cierra al guardar', $('#dgModal').hidden === true);
-ok('E7 quedó como propio', $$('#edDg .dg').some((x) => /E7/.test(x.textContent) && /propio/.test(x.textContent)));
+ok('E7 quedó como propio', $$('#edDg .dg').some((x) => /E7/.test(x.textContent) && x.hasAttribute('data-own')));
 $('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true })); await wait();
 ok('el diagrama propio se escribió en la base', api.writes === writes0 + 1 && !!api.bodies.get('ej2').diagrams.E7);
 

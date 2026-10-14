@@ -183,7 +183,7 @@ function stripHTML(song, ctx, ro) {
     var attr = can ? ' data-edit="' + esc(it.orig) + '" type="button"' : '';
     if (P.list.length) {
       var cur = P.list[posIndex(P)];
-      return '<' + tag + ' class="dg"' + attr + '>' + dgSVG(cur.d) + '<b>' + esc(P.disp) + '</b>' + (cur.custom ? '<i>propio</i>' : '<i>&nbsp;</i>') + '</' + tag + '>';
+      return '<' + tag + ' class="dg"' + attr + (cur.custom ? ' data-own="1"' : '') + '>' + dgSVG(cur.d) + '<b>' + esc(P.disp) + '</b><i>&nbsp;</i></' + tag + '>';
     }
     return '<' + tag + ' class="dg none"' + attr + '><div class="blank">?</div><b>' + esc(P.disp) + '</b><i>' + (can ? 'dibujar' : 'sin forma') + '</i></' + tag + '>';
   }).join('');
@@ -895,7 +895,7 @@ function renderPop() {
   if (n) {
     h += dgSVG(P.list[i].d, 64) +
       '<div class="nav"><button class="btn sq" type="button" data-pop="prev" aria-label="Posición anterior">‹</button>' +
-      '<span>' + (i + 1) + ' de ' + n + (P.list[i].custom ? ' · propio' : '') + '</span>' +
+      '<span>' + (i + 1) + ' de ' + n + '</span>' +
       '<button class="btn sq" type="button" data-pop="next" aria-label="Posición siguiente">›</button></div>';
   } else h += '<div class="blank">?</div><p class="hint">No hay una forma conocida para este acorde.</p>';
   if (pc.ctx.ss === 0 && inEdit() && n > 1) {
