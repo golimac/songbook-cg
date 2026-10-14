@@ -249,5 +249,13 @@ console.log('--- ChordPro ---\n' + cp);
   eq('texto que no es figura ni acorde sigue siendo duda', C.countDoubts(C.parseBody('[Zz (x)]hola')), 1);
 }
 
+/* introducción en varias líneas */
+{
+  const b = C.parseBody('{intro: C - C/B - C/A}\n{intro: Am - Am/G}\n[C]Hola\n{outro: G}\n{intro: D}');
+  eq('líneas seguidas del mismo tipo se unen', b.slice(0, 2).map((x) => [x.label, x.cont]), [['Intro', false], ['', true]]);
+  eq('otro tipo o separado por letra empieza de nuevo', [b[3].label, b[3].cont, b[4].label, b[4].cont], ['Outro', false, 'Intro', false]);
+  eq('los acordes de todas las líneas se recogen', C.collectChords(b).map((x) => x.orig).join(), 'C,C/B,C/A,Am,Am/G,G,D');
+}
+
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
 process.exitCode = fail ? 1 : 0;

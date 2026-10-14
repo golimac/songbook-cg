@@ -109,7 +109,10 @@ function blocksHTML(blocks, ctx, mode) {
       case 'alt': return mode === 'edit' ? '<div class="alt">alternativa · ' + esc(b.text) + '</div>' : '';
       case 'fill': return fillHTML(b);
       case 'tab': return '<pre class="tab">' + esc(b.lines.join('\n')) + '</pre>';
-      case 'chords': return '<div class="cl">' + (b.label ? '<span class="lab sp">' + esc(b.label) + '</span>' : '') + tokHTML(b.tokens, ctx) + '</div>';
+      case 'chords':
+        return b.label || b.cont
+          ? '<div class="cl lb' + (b.cont ? ' cont' : '') + '"><span class="lab">' + esc(b.label) + '</span><span class="clt">' + tokHTML(b.tokens, ctx) + '</span></div>'
+          : '<div class="cl">' + tokHTML(b.tokens, ctx) + '</div>';
       case 'lyric': return lyricHTML(b, ctx);
     }
     return '';
@@ -676,7 +679,7 @@ function openEditor(id, review) {
         '<li><code>[Am]</code> pone el acorde sobre la sílaba que sigue. Varios acordes sobre la misma sílaba van juntos: <code>[C-F-C]</code> o <code>[C (C4-C-G7-C)]</code>. Una figura cuerda-traste puede ir con o sin paréntesis: <code>(52)</code> o <code>62-63-63</code>.</li>' +
         '<li><code>&gt; G D Em</code> escribe una línea solo de acordes.</li>' +
         '<li>Si pegas la letra con los acordes en una línea encima, alineados con las sílabas, el botón <b>Convertir acordes sobre la letra</b> los pasa a <code>[Am]</code>. Acepta solfeo.</li>' +
-        '<li><code>{intro: G - D (50-60-62)}</code> escribe la introducción. Cada grupo entre paréntesis es cuerda y traste, y no se transpone.</li>' +
+        '<li><code>{intro: G - D (50-60-62)}</code> escribe la introducción. Cada grupo entre paréntesis es cuerda y traste, y no se transpone. Para partirla en líneas, escribe otra <code>{intro: …}</code> justo debajo: se leen como una sola introducción. Igual con <code>{outro: …}</code> e <code>{interludio: …}</code>.</li>' +
         '<li><code>{c: texto}</code> agrega una nota.</li>' +
         '<li><code>{fill: 30,32,(63,20),21}</code> escribe un fill en su propia línea, debajo del verso. Cada nota es cuerda y traste: <code>30</code> es la 3ª al aire y <code>110</code> la 1ª en el traste 10. Lo que va entre paréntesis suena a la vez. La tablatura se dibuja sola. Con nombre: <code>{fill Puente: 30,32}</code>.</li>' +
         '<li><code>{sot}</code> y <code>{eot}</code> encierran una tablatura.</li>' +

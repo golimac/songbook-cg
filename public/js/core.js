@@ -144,7 +144,12 @@ function parseBody(text) {
       blocks.push({ type: 'tab', lines: tab });
       continue;
     }
-    if ((m = /^\{(intro|outro|interludio)\s*:\s*(.*)\}$/i.exec(t))) blocks.push({ type: 'chords', label: cap(m[1]), tokens: tokenizeLine(m[2]) });
+    if ((m = /^\{(intro|outro|interludio)\s*:\s*(.*)\}$/i.exec(t))) {
+      /* Varias líneas seguidas del mismo tipo forman una sola: la etiqueta va en la primera. */
+      var kind = m[1].toLowerCase(), prev = blocks[blocks.length - 1];
+      var cont = !!(prev && prev.type === 'chords' && prev.kind === kind);
+      blocks.push({ type: 'chords', label: cont ? '' : cap(m[1]), kind: kind, cont: cont, tokens: tokenizeLine(m[2]) });
+    }
     else if ((m = /^\{fill(?:\s+([^:}]*?))?\s*:\s*(.*)\}$/i.exec(t))) { var pf = parseFill(m[2]); blocks.push({ type: 'fill', label: (m[1] || '').trim() || 'Fill', text: m[2], steps: pf.steps, doubts: pf.doubts }); }
     else if ((m = /^\{(?:c|comment|nota)\s*:\s*(.*)\}$/i.exec(t))) blocks.push({ type: 'note', text: m[1] });
     else if ((m = /^\{alt\s*:\s*(.*)\}$/i.exec(t))) blocks.push({ type: 'alt', text: m[1] });

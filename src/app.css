@@ -288,6 +288,10 @@
   .seg .c.cs .ch { font-size: 1em; }
   .cl { @apply mt-[.55em] whitespace-pre-wrap; }
   .cl .lab { @apply font-sans text-[11px] uppercase tracking-wider mr-[.6em]; }
+  .cl.lb { @apply flex items-baseline; }
+  .cl.lb .lab { @apply flex-none mr-0; width: 6.2em; }
+  .cl.lb .clt { @apply flex-1 min-w-0 whitespace-pre-wrap; }
+  .cl.cont { margin-top: .15em; }
   .ch { @apply font-semibold text-chord; font-size: .85em; }
   .sp { @apply text-mute; }
   .fig { @apply text-mute border border-dashed border-rule rounded px-[.3em]; font-size: .8em; }
