@@ -326,12 +326,15 @@ function chordNames() {
   var seen = {}, out = [];
   function add(n) {
     var c = parseChord(n); if (!c || c.star || c.doubt) return;
-    var k = chordKey(c), pcs = chordPcOf(c) + '|' + catQual(c.qual) + '|' + (c.bass || '');
+    var k = chordKey(c), pcs = chordPcOf(c) + '|' + libQual(c.qual) + '|' + (c.bass || '');
     if (seen[pcs]) return;
     seen[pcs] = 1; out.push(k);
   }
   Object.keys(chordLib).forEach(add);
-  catalogNames().forEach(add);
+  catalogNames().forEach(function (n) {
+    add(n);
+    if (/^[A-G][#b]?sus[24]$/.test(n)) add(n.replace(/sus/, ''));
+  });
   songs.forEach(function (s) { (Array.isArray(s.chords) ? s.chords : []).forEach(add); });
   return out.sort(function (a, b) {
     var ca = parseChord(a), cb = parseChord(b);
@@ -340,9 +343,11 @@ function chordNames() {
 }
 function chordPcOf(c) { var k = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[c.root] + (c.acc === '#' ? 1 : c.acc === 'b' ? -1 : 0); return (k + 12) % 12; }
 /* Identidad de un acorde sin importar cómo se escriba (A4 = Asus4, C+ = Caug, D/A = D/A) */
+/* A4 y Asus4 son acordes distintos para el cancionero (igual C4 y Csus4); el resto de escrituras equivalen */
+function libQual(q) { return q === '4' || q === '2' ? q : catQual(q); }
 function eqKey(name) {
   var c = parseChord(name); if (!c || c.star || c.doubt) return '';
-  return chordPcOf(c) + '|' + catQual(c.qual) + '|' + (c.bass || '');
+  return chordPcOf(c) + '|' + libQual(c.qual) + '|' + (c.bass || '');
 }
 function libKey(name) {
   var c = parseChord(name); if (!c) return name;
@@ -350,7 +355,7 @@ function libKey(name) {
   for (var i = 0; i < ks.length; i++) { var o = parseChord(ks[i]); if (o && chordKey(o) !== chordKey(c) && sameChord(o, c) && chordLib[ks[i]].length) return ks[i]; }
   return chordKey(c);
 }
-function sameChord(a, b) { return chordPcOf(a) === chordPcOf(b) && catQual(a.qual) === catQual(b.qual) && (a.bass || '') === (b.bass || ''); }
+function sameChord(a, b) { return chordPcOf(a) === chordPcOf(b) && libQual(a.qual) === libQual(b.qual) && (a.bass || '') === (b.bass || ''); }
 function cpShape(d) { return { frets: d.frets.slice(), base: d.base || 1, barre: d.barre ? { fret: d.barre.fret, from: d.barre.from, to: d.barre.to } : null }; }
 /* Posiciones de un acorde tal como las ve la biblioteca: la lista guardada, o las del catálogo si nunca se tocó */
 function curShapes(name) {
