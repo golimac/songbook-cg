@@ -276,7 +276,8 @@ var CAT = {
   Cdim7: ['x 3 4 2 4 x', '8 x 7 8 7 x', 'x x 10 11 10 11'],
   C7sus4: ['x 3 5 3 6 3', '8 x 8 10 8 x', 'x x 10 12 11 13']
 };
-function catalogNames() { return Object.keys(CAT); }
+/* Acordes con posiciones conocidas de fábrica */
+function catalogNames() { return Object.keys(CAT).concat(Object.keys(OPEN), Object.keys(EXTRA), Object.keys(SLASH), Object.keys(RAW)); }
 function catQual(q) {
   q = qualKey(q);
   return { '+': 'aug', '°': 'dim', '°7': 'dim7', sus: 'sus4', '7sus': '7sus4', sus7: '7sus4', 'Δ': 'maj7' }[q] || q;
