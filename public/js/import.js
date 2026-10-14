@@ -1,6 +1,7 @@
 // Importar fotos: elegir fotos, detectar y ajustar recuadros de canciones, leerlas con el modelo y pasar a la pantalla de revisión.
 import { dragBox, groupSongs, removeBox } from './photo.js';
 import { convertSolfege } from './core.js';
+import { extractText as realExtract, splitSongs, toSong } from './textimport.js';
 
 export function createImporter(d) {
   // d: { view, esc, toast, api, imaging, uid, openReview(review), finish(savedCount) }
@@ -14,9 +15,16 @@ export function createImporter(d) {
   /* ---------- 1. Elegir fotos ---------- */
   function render() {
     I.active = true; I.run++;
-    view.innerHTML = '<h1>Importar fotos</h1>' +
+    view.innerHTML = '<h1>Importar</h1>' +
+      '<h2 class="imh">Archivos de texto, PDF o Word</h2>' +
+      '<p class="hint" style="margin-top:6px">Para PDF con texto, <code>.docx</code> y <code>.txt</code>. El texto se lee aquí mismo, sin enviarlo a ningún modelo, y los acordes que están sobre la letra se pasan a <code>[Am]</code>. Después revisas cada canción.</p>' +
+      '<form class="form" id="imTxtForm" style="margin-top:12px;max-width:560px" autocomplete="off">' +
+        '<label class="f">Archivos<input type="file" id="imTxt" accept=".pdf,.docx,.doc,.txt,text/plain,application/pdf" multiple></label>' +
+        '<div class="actions"><button class="btn primary" type="submit">Leer archivos</button></div>' +
+      '</form>' +
+      '<h2 class="imh">Fotos</h2>' +
       '<p class="hint" style="margin-top:6px">Una foto por página. El sistema encuentra las canciones, tú ajustas los recuadros, y después revisas cada transcripción junto a la foto.</p>' +
-      '<form class="form" id="imForm" style="margin-top:16px;max-width:560px" autocomplete="off">' +
+      '<form class="form" id="imForm" style="margin-top:12px;max-width:560px" autocomplete="off">' +
         '<label class="f">Fotos<input type="file" id="imFiles" accept="image/*" multiple></label>' +
         '<div class="actions"><button class="btn primary" type="submit">Empezar</button><button class="btn" type="button" id="imCancel">Cancelar</button></div>' +
       '</form>';
@@ -201,7 +209,79 @@ export function createImporter(d) {
     beginPhoto();
   }
 
+  /* ---------- Archivos de texto, PDF y Word ---------- */
+  function readFiles(files) {
+    var run = I.run, parts = [], errors = [], fi = 0;
+    var extract = d.extractText || realExtract;
+    function next() {
+      if (!mine(run)) return;
+      if (fi >= files.length) { afterRead(parts, errors); return; }
+      var f = files[fi];
+      view.innerHTML = '<h1>Leyendo archivos</h1><p class="hint" style="margin-top:6px">Archivo ' + (fi + 1) + ' de ' + files.length + ': ' + esc(f.name) + '</p>';
+      extract(f).then(function (text) {
+        splitSongs(text).forEach(function (sg) { parts.push({ file: f.name, title: sg.title, text: sg.text }); });
+        fi++; next();
+      }, function (e) { errors.push(f.name + ': ' + errMsg(e)); fi++; next(); });
+    }
+    next();
+  }
+  function afterRead(parts, errors) {
+    I.tparts = parts; I.terrors = errors;
+    if (!parts.length) {
+      view.innerHTML = '<h1>No se encontró ninguna canción</h1>' + errorsHTML(errors) +
+        '<div class="actions" style="margin-top:12px"><button class="btn primary" type="button" id="imBack">Volver</button></div>';
+      return;
+    }
+    if (parts.length === 1 && !errors.length) { startTextReview(); return; }
+    renderParts();
+  }
+  function errorsHTML(errors) {
+    return errors.length ? '<ul class="imerr">' + errors.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ul>' : '';
+  }
+  function renderParts() {
+    var ps = I.tparts;
+    view.innerHTML = '<h1>Canciones encontradas</h1>' +
+      '<p class="hint" style="margin-top:6px">' + ps.length + (ps.length === 1 ? ' canción' : ' canciones') + '. Corrige los títulos y, si una canción quedó partida o unida, usa <b>Unir con la anterior</b> o <b>Quitar</b>. Después revisas cada una.</p>' +
+      errorsHTML(I.terrors || []) +
+      '<div class="tparts">' + ps.map(function (p, i) {
+        var prev = p.text.split('\n').filter(function (l) { return /\S/.test(l); }).slice(0, 4).join('\n');
+        return '<div class="tpart"><div class="tp-h"><span class="sgn">' + (i + 1) + '</span>' +
+          '<input type="text" data-tt="' + i + '" value="' + esc(p.title) + '" placeholder="Título" aria-label="Título de la canción ' + (i + 1) + '">' +
+          (i ? '<button class="btn" type="button" data-tmerge="' + i + '">Unir con la anterior</button>' : '') +
+          '<button class="btn" type="button" data-tdel="' + i + '">Quitar</button></div>' +
+          '<pre class="tp-p">' + esc(prev) + '</pre><p class="hint">' + esc(p.file) + '</p></div>';
+      }).join('') + '</div>' +
+      '<div class="actions" style="margin-top:14px"><button class="btn primary" type="button" id="imTGo">Revisar ' + (ps.length === 1 ? 'la canción' : 'las canciones') + '</button><button class="btn" type="button" id="imBack">Volver</button></div>';
+  }
+  function startTextReview() {
+    var run = I.run, k = 0, ps = I.tparts.slice();
+    if (!ps.length) { renderParts(); return; }
+    function next() {
+      if (!mine(run)) return;
+      if (k >= ps.length) { finish(); return; }
+      var p = ps[k], r = toSong(p, p.file);
+      var song = { id: d.uid(), title: r.title, artist: '', key: '', tuning: '', source: r.source, status: 'pendiente', body: r.body, diagrams: {}, doubts: 0 };
+      k++;
+      d.openReview({
+        song: song, crops: [], doubts: [], remarks: '',
+        label: 'Canción ' + k + ' de ' + ps.length + ' · ' + p.file,
+        onSave: function () { I.saved++; next(); },
+        onSkip: next,
+        onAbort: finish
+      });
+    }
+    I.saved = 0;
+    next();
+  }
+
   /* ---------- Eventos ---------- */
+  view.addEventListener('submit', function (e) {
+    if (!e.target || e.target.id !== 'imTxtForm') return;
+    e.preventDefault();
+    var fs = [].slice.call($('#imTxt').files || []);
+    if (!fs.length) { d.toast('Elige al menos un archivo.', true); return; }
+    readFiles(fs.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; }));
+  });
   view.addEventListener('submit', function (e) {
     if (!e.target || e.target.id !== 'imForm') return;
     e.preventDefault();
@@ -224,6 +304,16 @@ export function createImporter(d) {
     else if (id === 'imManual') I.manual();
     else if (id === 'imSplit') I.split();
     else if (id === 'imAbort') finish();
+    else if (id === 'imBack') render();
+    else if (id === 'imTGo') startTextReview();
+    else if (e.target.getAttribute && e.target.getAttribute('data-tmerge') != null) {
+      var mi = parseInt(e.target.getAttribute('data-tmerge'), 10), a = I.tparts[mi - 1], b = I.tparts[mi];
+      a.text = a.text + '\n\n' + (b.title ? b.title + '\n' : '') + b.text; I.tparts.splice(mi, 1); renderParts();
+    }
+    else if (e.target.getAttribute && e.target.getAttribute('data-tdel') != null) {
+      I.tparts.splice(parseInt(e.target.getAttribute('data-tdel'), 10), 1);
+      if (!I.tparts.length) render(); else renderParts();
+    }
     else if (e.target.getAttribute && e.target.getAttribute('data-del') != null) {
       if (I.boxes.length <= 1) { d.toast('Debe quedar al menos un recuadro.', true); return; }
       I.boxes = removeBox(I.boxes, parseInt(e.target.getAttribute('data-del'), 10));
@@ -234,6 +324,7 @@ export function createImporter(d) {
     if (!I.active) return;
     var t = e.target;
     if (t.getAttribute && t.getAttribute('data-t') != null) I.boxes[parseInt(t.getAttribute('data-t'), 10)].title = t.value;
+    else if (t.getAttribute && t.getAttribute('data-tt') != null) I.tparts[parseInt(t.getAttribute('data-tt'), 10)].title = t.value;
   });
   view.addEventListener('change', function (e) {
     if (!I.active) return;

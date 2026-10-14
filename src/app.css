@@ -382,6 +382,13 @@
   .hd[data-h=sw] { left: -11px; bottom: -11px; cursor: nesw-resize; }
   .hd[data-h=se] { right: -11px; bottom: -11px; cursor: nwse-resize; }
   .segside { @apply grid gap-3; }
+  .imh { @apply font-display font-semibold text-lg text-ink mt-6; }
+  .imerr { @apply mt-3 grid gap-1 text-sm text-doubt-ink bg-doubt rounded-lg px-3 py-2; }
+  .tparts { @apply grid gap-3 mt-4 max-w-[720px]; }
+  .tpart { @apply border border-rule rounded-xl bg-card p-3 grid gap-2; }
+  .tp-h { @apply flex items-center gap-2 flex-wrap; }
+  .tp-h input { @apply flex-1 min-w-[160px]; }
+  .tp-p { @apply font-mono text-[13px] text-mute whitespace-pre-wrap overflow-x-auto m-0; }
   .segList { @apply grid gap-2.5; }
   .sgi { @apply grid items-center border border-rule rounded-xl bg-card p-2 gap-x-2 gap-y-1.5; grid-template-columns: auto minmax(0, 1fr) auto; }
   .sgi select { @apply min-w-0; grid-column: 2 / 3; }

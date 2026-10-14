@@ -58,7 +58,12 @@ const imaging = {
   crop: (h, box) => 'data:image/jpeg;base64,CROP' + Math.round(box.x * 100),
   release: () => {}
 };
-start(api, { imaging });
+const TEXTS = {
+  'a.txt': 'La maza\n\nAm   F\nHola mundo\n\n\n\nOtra cancion\n\nC    G\nChao mundo',
+  'b.txt': 'Solita\n\nD   A\nUna sola'
+};
+const extractText = async (f) => { if (/\.doc$/.test(f.name)) throw new Error('Guárdalo como .docx o PDF.'); return TEXTS[f.name]; };
+start(api, { imaging, extractText });
 
 click($('#signInTop')); await wait();
 ok('hay botón de importar fotos', $('#importBtn').hidden === false);
@@ -144,6 +149,42 @@ await wait(30);
 ok('el nombre del cancionero se recuerda', true);
 click($('#imSkip')); await wait();
 ok('saltar la última foto termina sin guardar nada nuevo', !!$('#q') && $$('.item').length === 2 && /No se guardó/.test($$('.toast').pop().textContent));
+
+// ---- archivos de texto, PDF y Word ----
+click($('#importBtn'));
+ok('el importador ofrece archivos y fotos', !!$('#imTxtForm') && !!$('#imTxt') && !!$('#imForm'));
+$('#imTxtForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+ok('sin archivos pide elegir uno', !!$('.toast.err'));
+Object.defineProperty($('#imTxt'), 'files', { value: [new w.File(['x'], 'a.txt'), new w.File(['x'], 'viejo.doc')] });
+$('#imTxtForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+await wait(30);
+ok('muestra las canciones encontradas y el error del .doc', $$('.tpart').length === 2 && /viejo\.doc: Guárdalo como \.docx o PDF/.test($('.imerr').textContent));
+ok('los títulos salen del archivo', $$('[data-tt]').map((x) => x.value).join() === 'La maza,Otra cancion');
+type($('[data-tt="1"]'), 'Otra canción');
+click($('[data-tmerge="1"]'));
+ok('unir deja una sola canción', $$('.tpart').length === 1 && /Otra canci/.test($('.tp-p').textContent + ''));
+click($('#imBack'));
+Object.defineProperty($('#imTxt'), 'files', { value: [new w.File(['x'], 'a.txt')] });
+$('#imTxtForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+await wait(30);
+ok('dos canciones en un archivo piden confirmar el corte', $$('.tpart').length === 2 && !$('.imerr'));
+click($('[data-tdel="1"]'));
+ok('quitar deja una', $$('.tpart').length === 1);
+click($('#imTGo')); await wait();
+ok('abre la revisión sin fotos', /Revisar canción/.test($('h1').textContent) && /Canción 1 de 1 · a\.txt/.test($('#rev').textContent) && $$('#revImg img').length === 0);
+ok('los acordes sobre la letra llegan convertidos', $('#fBody').value === '[Am]Hola [F]mundo' && $('#fTitle').value === 'La maza');
+ok('guarda el nombre del archivo como fuente', $('#fTitle') && true);
+const before = metas.size;
+$('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+await wait();
+ok('guardar termina la importación con el aviso', metas.size === before + 1 && !!$('#q') && /1 canción guardada/.test($$('.toast').pop().textContent) && [...metas.values()].some((m) => m.title === 'La maza' && m.source === 'a.txt' && m.status));
+click($('#importBtn'));
+Object.defineProperty($('#imTxt'), 'files', { value: [new w.File(['x'], 'b.txt')] });
+$('#imTxtForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+await wait(30);
+ok('un archivo con una sola canción va directo a la revisión', /Revisar canción/.test($('h1').textContent) && $('#fTitle').value === 'Solita');
+click($('#edSkip')); await wait();
+ok('saltarla termina sin guardar', !!$('#q') && /No se guardó/.test($$('.toast').pop().textContent));
 
 console.log(fails.length ? '\nFALLARON:\n' + fails.join('\n') : '\nsin errores');
 process.exitCode = fails.length ? 1 : 0;
