@@ -378,7 +378,7 @@ function acordesHTML() {
   var names = chordNames();
   var h = crumb(['home', 'Inicio'], 'Biblioteca de acordes', names.length);
   h += '<form class="chadd" id="chAdd"><label class="f">Buscar acorde<input type="text" id="chName" autocomplete="off" placeholder="Por ejemplo Am7, C4 o C/G" value="' + esc(LIB.chord || '') + '"></label>' +
-    '<button class="btn primary" type="submit">Ver posiciones</button><span class="hint" id="chMsg" role="status"></span></form>';
+    '<button class="btn primary" type="submit">Ver posiciones</button><span class="hint" id="chMsg" role="status"></span></form><p class="hint" id="chProg" role="status"></p>';
   if (LIB.chord) h += chordDetailHTML(LIB.chord);
   return h + '<div class="chgrid">' + names.map(function (n) {
     var list = curShapes(libKey(n));
@@ -410,16 +410,23 @@ function ensureSongChords() {
   var miss = songs.filter(function (s) { return !Array.isArray(s.chords) || !s.libSync; });
   if (!miss.length) return;
   S.chBusy = true;
-  var dgs = [];
+  var fails = 0;
+  function prog(t) { var el = $('#chProg'); if (el) el.textContent = t; }
   (function next(i) {
-    if (i >= miss.length) { S.chBusy = false; harvestDiagrams(dgs); if (S.view === 'library' && LIB.page === 'acordes') fillList(); return; }
+    if (i >= miss.length) {
+      S.chBusy = false;
+      prog(fails ? 'No se pudieron revisar ' + plural(fails, 'canción', 'canciones') + '. Se reintenta al volver a abrir la biblioteca.' : '');
+      if (S.view === 'library' && LIB.page === 'acordes') fillList();
+      return;
+    }
     var s = miss[i];
+    prog('Revisando canciones… ' + (i + 1) + ' de ' + miss.length);
     api.getBody(s.id).then(function (b) {
       var list = bodyChordNames(b && b.body);
+      harvestDiagrams([b && b.diagrams]);
       s.chords = list; s.libSync = true;
-      if (b && b.diagrams) dgs.push(b.diagrams);
       return api.setSongChords(s.id, list);
-    }).then(function () { next(i + 1); }, function () { S.chBusy = false; });
+    }).then(function () { next(i + 1); }, function () { fails++; next(i + 1); });
   })(0);
 }
 function homeHTML() {
