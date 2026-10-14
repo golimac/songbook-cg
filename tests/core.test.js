@@ -196,9 +196,9 @@ console.log('--- ChordPro ---\n' + cp);
 {
   const mine = { frets: [-1, 0, 2, 2, 1, 0], base: 1, barre: null };
   C.setUserShapes({ 'Am': [mine], 'C#m7': [{ frets: [-1, 4, 6, 4, 5, 4], base: 4, barre: null }] });
-  eq('la forma propia va primero', C.shapesFor(C.parseChord('Am'))[0].frets, mine.frets);
-  eq('sin duplicar la del catálogo', C.shapesFor(C.parseChord('Am')).filter((d) => d.frets.join() === mine.frets.join()).length, 1);
-  eq('vale con el nombre enarmónico', C.shapesFor(C.parseChord('Dbm7'))[0].frets, [-1, 4, 6, 4, 5, 4]);
+  eq('la lista guardada es la única del acorde', C.shapesFor(C.parseChord('Am')).map((d) => d.frets.join()), [mine.frets.join()]);
+  eq('sin lista guardada sigue el catálogo', C.shapesFor(C.parseChord('Am'), true).length > 1, true);
+  eq('vale con el nombre enarmónico', C.shapesFor(C.parseChord('Dbm7')).map((d) => d.frets), [[-1, 4, 6, 4, 5, 4]]);
   eq('clave de acorde con bajo', C.chordKey(C.parseChord('C/G')), 'C/G');
   C.setUserShapes({});
   eq('vacía vuelve al catálogo', C.shapesFor(C.parseChord('Am'))[0].frets, [-1, 0, 2, 2, 1, 0]);

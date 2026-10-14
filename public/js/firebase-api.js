@@ -2,7 +2,7 @@
 //
 // Modelo en Firestore:
 //   songs/{id}   datos livianos para la lista: title, artist, key, tuning, source, page, status, doubts, album, year, cover, createdAt, updatedAt
-//   chords/{nombre}  formas propias de un acorde suelto (biblioteca de acordes): name, shapes [{frets, base, barre}]
+//   chords/{nombre}  posiciones de un acorde (biblioteca de acordes): name, shapes [{frets, base, barre}]
 //   bodies/{id}  cuerpo pesado, se lee al abrir la canción: body, diagrams, prefs (posición principal por acorde)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import {
@@ -10,11 +10,11 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, getDoc, onSnapshot, query, where, writeBatch, serverTimestamp, setDoc, deleteDoc
+  collection, doc, getDoc, onSnapshot, query, where, writeBatch, serverTimestamp, setDoc, deleteDoc, updateDoc
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
-const META = ['title', 'artist', 'key', 'tuning', 'source', 'page', 'status', 'doubts', 'album', 'year', 'cover'];
+const META = ['title', 'artist', 'key', 'tuning', 'source', 'page', 'status', 'doubts', 'album', 'year', 'cover', 'chords'];
 
 export function createFirebaseApi() {
   const app = initializeApp(firebaseConfig);
@@ -69,7 +69,7 @@ export function createFirebaseApi() {
     // La lista ya refleja el cambio al instante, así que app.js no espera esta promesa.
     saveSong(song, isNew) {
       const meta = {};
-      META.forEach((k) => { meta[k] = song[k] == null ? '' : song[k]; });
+      META.forEach((k) => { if (k === 'chords') { if (Array.isArray(song.chords)) meta.chords = song.chords; } else meta[k] = song[k] == null ? '' : song[k]; });
       meta.doubts = song.doubts || 0;
       meta.updatedAt = serverTimestamp();
       if (isNew) meta.createdAt = serverTimestamp();
@@ -78,6 +78,8 @@ export function createFirebaseApi() {
       b.set(doc(db, 'bodies', song.id), { body: song.body || '', diagrams: song.diagrams || {}, prefs: song.prefs || {} });
       return b.commit();
     },
+
+    setSongChords(id, chords) { return updateDoc(doc(db, 'songs', id), { chords }); },
 
     deleteSong(id) {
       const b = writeBatch(db);
@@ -122,7 +124,7 @@ export function createFirebaseApi() {
       const b = writeBatch(db);
       songs.forEach((song) => {
         const meta = {};
-        META.forEach((k) => { meta[k] = song[k] == null ? '' : song[k]; });
+        META.forEach((k) => { if (k === 'chords') { if (Array.isArray(song.chords)) meta.chords = song.chords; } else meta[k] = song[k] == null ? '' : song[k]; });
         meta.updatedAt = serverTimestamp();
         meta.createdAt = serverTimestamp();
         b.set(doc(db, 'songs', song.id), meta);

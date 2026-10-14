@@ -21,12 +21,13 @@ const list = [
 ];
 for (let i = 0; i < 25; i++) list.push(mk('x' + i, 'Canción ' + String.fromCharCode(66 + (i % 20)) + i, 'Grupo ' + (i % 3), 'pendiente', 0, 100 + i));
 
-let chordCb = null; const saved = [];
+let chordCb = null; const saved = []; const chSaved = [];
 const api = {
   onAuth(cb) { cb({ uid: 'u', email: 'yo@example.test' }); return () => {}; },
   async signIn() {}, async signOut() {},
   subscribeSongs(ok) { setTimeout(() => ok(list.map((s) => ({ ...s }))), 0); return () => {}; },
   async getBody() { return { body: '', diagrams: {} }; },
+  setSongChords(id, l) { chSaved.push([id, l]); return Promise.resolve(); },
   subscribeChords(ok2) { chordCb = ok2; return () => {}; },
   saveChord(n, sh) { saved.push([n, sh]); return Promise.resolve(); }, deleteChord(n) { saved.push([n, null]); return Promise.resolve(); },
   saveSong() { return Promise.resolve(); }, deleteSong() { return Promise.resolve(); }, saveMany() { return Promise.resolve(); }
@@ -114,34 +115,39 @@ ok('Pendientes: todo lo que no está revisado', $$('.item').length === 28 && !$$
 
 // ---- biblioteca de acordes ----
 click($('[data-lib="home"]'));
-ok('la portada tiene la caja Acordes para el editor', !!$('.b-ch'));
-click($('.b-ch .more'));
-ok('la página Acordes ofrece el formulario al editor', !!$('#chAdd') && /Escribe el nombre/.test($('#lib').textContent));
+ok('la portada tiene el botón Biblioteca de acordes para el editor', !!$('.b-ch') && /Biblioteca de acordes/.test($('.b-ch').textContent));
+click($('.b-ch'));
+await wait();
+ok('al abrir la biblioteca se completan los acordes de las canciones que no los tenían', chSaved.length > 0);
+ok('la página muestra buscador y la lista completa del catálogo', !!$('#chAdd') && /Biblioteca de acordes/.test($('.crumb h1').textContent) && $$('.chcard h3').some((h) => h.textContent === 'C') && !/propias/.test($('#lib').textContent));
+$('#chName').value = 'Cm';
+$('#chName').dispatchEvent(new w.Event('input', { bubbles: true }));
+ok('escribir filtra la lista en vivo', $$('.chcard').filter((c) => !c.hidden).length >= 1 && $$('.chcard').filter((c) => !c.hidden).every((c) => /^cm/.test(c.getAttribute('data-n'))));
 $('#chName').value = 'zzz';
 $('#chAdd').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 ok('un nombre que no es acorde se avisa', /No reconozco/.test($('#chMsg').textContent) && $('#dgModal').hidden);
 $('#chName').value = 'Am7';
 $('#chAdd').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
-ok('buscar un acorde muestra sus formas del catálogo', !!$('#chdet') && $$('#chdet figure').length >= 2 && $$('#chdet .tg2').every((t) => t.textContent === 'catálogo') && $('#dgModal').hidden);
-click($('[data-chcopy="Am7"][data-i="0"]'));
-ok('Copiar y editar abre el editor con esa forma', !$('#dgModal').hidden && /Am7/.test($('#dgTitle').textContent) && $('#dgDel').hidden);
-click($('#dgSave'));
-ok('guardar la copia la manda a la biblioteca', saved.length === 1 && saved[0][0] === 'Am7' && saved[0][1].length === 1 && $('#dgModal').hidden);
-ok('la copia sale como propia y deja de verse como catálogo', $$('#chdet .tg2.own').length === 1 && $$('#chdet figure').length >= 2);
+ok('buscar un acorde muestra todas sus posiciones sin etiquetas', !!$('#chdet') && $$('#chdet figure').length >= 2 && !$('#chdet .tg2') && $$('[data-chedit]').length === $$('#chdet figure').length && $('#dgModal').hidden);
+const nAm7 = $$('#chdet figure').length;
+click($('[data-chedit="Am7"][data-i="0"]'));
+ok('Editar abre una posición del catálogo', !$('#dgModal').hidden && /Am7/.test($('#dgTitle').textContent) && !$('#dgDel').hidden);
+click($('#dgCancel'));
+ok('cancelar no guarda nada', saved.length === 0);
+click($('[data-chdel="Am7"][data-i="0"]'));
+ok('Quitar una posición del catálogo guarda la lista completa menos esa', saved.length === 1 && saved[0][0] === 'Am7' && saved[0][1].length === nAm7 - 1 && $$('#chdet figure').length === nAm7 - 1);
 click($('[data-chadd="Am7"]'));
 click($('#dgSave'));
-ok('una forma que ya existe en el catálogo se avisa y no se guarda', saved.length === 1 && !$('#dgModal').hidden && !!$('.toast.err'));
+ok('una posición ya existente en la lista se avisa y no se guarda', saved.length === 1 && !$('#dgModal').hidden && !!$('.toast.err'));
 click($('#dgCancel'));
-click($('[data-chedit="Am7"][data-i="0"]'));
-ok('Editar abre la forma propia', !$('#dgModal').hidden && !$('#dgDel').hidden);
-click($('#dgCancel'));
-click($('[data-chsee=""]'));
-ok('la tarjeta del acorde aparece abajo', $$('.chcard h3').some((h) => h.textContent === 'Am7') && !$('#chdet'));
-chordCb([{ name: 'Am7', shapes: saved[0][1] }, { name: 'C4', shapes: [{ frets: [-1, 3, 3, 0, 1, 0], base: 1, barre: null }] }]);
-ok('la suscripción reemplaza la biblioteca', $$('.chcard h3').map((h) => h.textContent).join() === 'C4,Am7');
+ok('aparece el botón para volver a las originales', !!$('[data-chreset="Am7"]'));
+click($('[data-chreset="Am7"]'));
+ok('volver a las originales borra la lista guardada', saved[saved.length - 1][0] === 'Am7' && saved[saved.length - 1][1] === null && $$('#chdet figure').length === nAm7 && !$('[data-chreset]'));
+chordCb([{ name: 'Zz9', shapes: [] }, { name: 'C4', shapes: [{ frets: [-1, 3, 3, 0, 1, 0], base: 1, barre: null }] }]);
 click($('[data-chsee="C4"]'));
+ok('una lista guardada reemplaza a la del catálogo', $$('#chdet figure').length === 1);
 click($('[data-chdel="C4"][data-i="0"]'));
-ok('Quitar la última forma borra el acorde', saved[saved.length - 1][0] === 'C4' && saved[saved.length - 1][1] === null && $$('.chcard h3').map((h) => h.textContent).join() === 'Am7');
+ok('Quitar la última posición vuelve a las originales', saved[saved.length - 1][0] === 'C4' && saved[saved.length - 1][1] === null);
 click($('[data-lib="home"]'));
 click($('[data-lib="pendientes"]'));
 

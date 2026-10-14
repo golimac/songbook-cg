@@ -276,6 +276,7 @@ var CAT = {
   Cdim7: ['x 3 4 2 4 x', '8 x 7 8 7 x', 'x x 10 11 10 11'],
   C7sus4: ['x 3 5 3 6 3', '8 x 8 10 8 x', 'x x 10 12 11 13']
 };
+function catalogNames() { return Object.keys(CAT); }
 function catQual(q) {
   q = qualKey(q);
   return { '+': 'aug', '°': 'dim', '°7': 'dim7', sus: 'sus4', '7sus': '7sus4', sus7: '7sus4', 'Δ': 'maj7' }[q] || q;
@@ -294,7 +295,7 @@ function fromFrets(str) {
   }
   return { frets: f, base: base, barre: barre };
 }
-/* Formas guardadas por el editor en la biblioteca de acordes: { 'Am7': [{frets, base, barre}] }. Van antes que las del catálogo. */
+/* Posiciones guardadas en la biblioteca de acordes: { 'Am7': [{frets, base, barre}] }. Cuando un acorde las tiene, reemplazan a las del catálogo. */
 var USER = {};
 function setUserShapes(m) { USER = m || {}; }
 function chordKey(c) { return c.root + c.acc + c.qual + (c.bass ? '/' + c.bass : ''); }
@@ -313,9 +314,13 @@ function shapesFor(c, noUser) {
   var pc = chordPc(c);
   var out = [], seen = {};
   function add(d) { var k = d.frets.join(','); if (seen[k]) return; seen[k] = 1; out.push(d); }
-  if (!noUser) userKeys(c).forEach(function (k) {
-    (USER[k] || []).forEach(function (d) { add({ frets: d.frets.slice(), base: d.base || 1, barre: d.barre ? { fret: d.barre.fret, from: d.barre.from, to: d.barre.to } : null }); });
-  });
+  if (!noUser) {
+    userKeys(c).forEach(function (k) {
+      (USER[k] || []).forEach(function (d) { add({ frets: d.frets.slice(), base: d.base || 1, barre: d.barre ? { fret: d.barre.fret, from: d.barre.from, to: d.barre.to } : null }); });
+    });
+    /* Si el acorde tiene lista guardada en la biblioteca, esa lista es la única */
+    if (out.length) return out;
+  }
   var raw = RAW[c.root + c.acc + c.qual + (c.bass ? '/' + c.bass : '')];
   if (raw) raw.forEach(function (x) { add(fromCode(x)); });
   if (c.bass) {
@@ -538,5 +543,5 @@ function listDoubts(body) {
 export {
   parseChord, chordToString, chordPc, transposeChord, parseKey, flatsFor, keyName,
   tokenizeLine, segTokens, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
-  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, setUserShapes, chordKey, parseFill, fillTab
+  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, setUserShapes, chordKey, parseFill, fillTab, catalogNames, catQual
 };
