@@ -378,7 +378,8 @@ function acordesHTML() {
   var names = chordNames();
   var h = crumb(['home', 'Inicio'], 'Biblioteca de acordes', names.length);
   h += '<form class="chadd" id="chAdd"><label class="f">Buscar acorde<input type="text" id="chName" autocomplete="off" placeholder="Por ejemplo Am7, C4 o C/G" value="' + esc(LIB.chord || '') + '"></label>' +
-    '<button class="btn primary" type="submit">Ver posiciones</button><span class="hint" id="chMsg" role="status"></span></form><p class="hint" id="chProg" role="status"></p>';
+    '<button class="btn primary" type="submit">Ver posiciones</button><span class="hint" id="chMsg" role="status"></span></form>' +
+    (editable() ? '<p class="hint"><button type="button" class="btn" id="chScan">Traer los diagramas de mis canciones</button> <span id="chProg" role="status"></span></p>' : '');
   if (LIB.chord) h += chordDetailHTML(LIB.chord);
   return h + '<div class="chgrid">' + names.map(function (n) {
     var list = curShapes(libKey(n));
@@ -402,31 +403,33 @@ function harvestDiagrams(list) {
   var ks = Object.keys(changed);
   ks.forEach(function (k) { chordLib[k] = changed[k]; api.saveChord(k, changed[k]).catch(failSave); });
   if (ks.length) onChords();
+  return ks.length;
 }
 /* Acordes que usa cada canción: se guardan en la ficha; las que no los tienen se completan una vez */
 function bodyChordNames(body) { return collectChords(parseBody(body || '')).map(function (x) { return x.orig; }); }
-function ensureSongChords() {
+function ensureSongChords(force) {
   if (!editable() || S.chBusy || !api.setSongChords) return;
-  var miss = songs.filter(function (s) { return !Array.isArray(s.chords) || !s.libSync; });
-  if (!miss.length) return;
+  var miss = force ? songs.slice() : songs.filter(function (s) { return !Array.isArray(s.chords) || !s.libSync; });
+  if (!miss.length) { if (force) { var e0 = $('#chProg'); if (e0) e0.textContent = 'No hay canciones para revisar.'; } return; }
   S.chBusy = true;
-  var fails = 0;
+  var fails = 0, added = 0, firstErr = '';
   function prog(t) { var el = $('#chProg'); if (el) el.textContent = t; }
   (function next(i) {
     if (i >= miss.length) {
       S.chBusy = false;
-      prog(fails ? 'No se pudieron revisar ' + plural(fails, 'canción', 'canciones') + '. Se reintenta al volver a abrir la biblioteca.' : '');
-      if (S.view === 'library' && LIB.page === 'acordes') fillList();
+      prog(fails ? 'No se pudieron revisar ' + plural(fails, 'canción', 'canciones') + (firstErr ? ' (' + firstErr + ')' : '') + '.'
+        : force ? 'Listo: ' + plural(miss.length, 'canción revisada', 'canciones revisadas') + ', ' + plural(added, 'posición nueva', 'posiciones nuevas') + ' en la biblioteca.' : '');
+      if (S.view === 'library' && LIB.page === 'acordes' && !force) fillList();
       return;
     }
     var s = miss[i];
     prog('Revisando canciones… ' + (i + 1) + ' de ' + miss.length);
     api.getBody(s.id).then(function (b) {
       var list = bodyChordNames(b && b.body);
-      harvestDiagrams([b && b.diagrams]);
+      added += harvestDiagrams([b && b.diagrams]);
       s.chords = list; s.libSync = true;
       return api.setSongChords(s.id, list);
-    }).then(function () { next(i + 1); }, function () { fails++; next(i + 1); });
+    }).then(function () { next(i + 1); }, function (er) { fails++; if (!firstErr) firstErr = (er && (er.code || er.message)) || 'error'; next(i + 1); });
   })(0);
 }
 function homeHTML() {
@@ -1050,6 +1053,7 @@ view.addEventListener('click', function (e) {
     }
     return;
   }
+  if (t.id === 'chScan') { ensureSongChords(true); return; }
   if (t.id === 'alFind') { findAlbum(); return; }
   if (t.id === 'alClear') { $('#fAlbum').value = ''; $('#fYear').value = ''; $('#fCover').value = ''; readForm(); coverPrev(); $('#alRes').hidden = true; $('#alMsg').textContent = ''; return; }
   var o = t.closest('[data-open]');
