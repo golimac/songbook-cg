@@ -84,7 +84,7 @@ function tokenizeLine(str) {
 function segTokens(str) {
   if (str == null || !/[()\-\s·]/.test(str) || parseChord(str)) return null;
   var toks = tokenizeLine(str), has = false;
-  walkTokens(toks, function (t) { if (t.type === 'chord') has = true; });
+  walkTokens(toks, function (t) { if (t.type === 'chord' || t.type === 'fig') has = true; });
   return has ? toks : null;
 }
 function parseLyricLine(line) {

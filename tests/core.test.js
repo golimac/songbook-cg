@@ -239,5 +239,15 @@ console.log('--- ChordPro ---\n' + cp);
   eq('convertSolfege no toca el fill', C.convertSolfege('{fill: 30,32}'), '{fill: 30,32}');
 }
 
+/* figura suelta dentro de corchetes */
+{
+  const b = C.parseBody('[C]Hola [(53)]mundo\n[62-63-63]otra');
+  eq('una figura sola en corchetes no cuenta como duda', C.countDoubts(b), 0);
+  eq('se tokeniza como figura', C.segTokens('(53)').map((t) => t.type), ['fig']);
+  eq('una serie sola también', C.segTokens('62-63-63').map((t) => t.type), ['fig']);
+  eq('un acorde suelto sigue igual', C.segTokens('Am'), null);
+  eq('texto que no es figura ni acorde sigue siendo duda', C.countDoubts(C.parseBody('[Zz (x)]hola')), 1);
+}
+
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
 process.exitCode = fail ? 1 : 0;
