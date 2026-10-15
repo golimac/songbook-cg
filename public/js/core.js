@@ -463,6 +463,15 @@ function chordLineInfo(line) {
   while ((m = re.exec(line))) {
     var tk = m[0];
     if (tk === '-' || tk === '·') { if (!last) return null; last.sep = tk; continue; }
+    if (tk.length > 1 && tk.indexOf('-') > 0 && tk.charAt(tk.length - 1) !== '-') {
+      /* Em-Em/Eb pegados con guion: un solo grupo */
+      var ps = tk.split('-').map(solToLetter);
+      if (ps.every(function (x) { return parseChord(x); })) {
+        if (last && last.sep) { last.text += ' ' + last.sep + ' ' + ps.join(' - '); last.sep = ''; }
+        else { last = { col: m.index, text: ps.join(' - '), sep: '' }; groups.push(last); }
+        continue;
+      }
+    }
     var c = solToLetter(tk);
     if (!parseChord(c)) return null;
     if (last && last.sep) { last.text += ' ' + last.sep + ' ' + c; last.sep = ''; }
@@ -530,6 +539,7 @@ function listDoubts(body) {
       else {
         var re2 = /\[([^\]]*)\]/g, mm;
         while ((mm = re2.exec(raw))) {
+          if (segTokens(mm[1])) { scanChords(mm[1], off + mm.index + 1, i); continue; }
           var c2 = parseChord(mm[1]);
           if (!c2) out.push({ text: mm[1], kind: 'ilegible', line: i, start: off + mm.index + 1, end: off + mm.index + 1 + mm[1].length });
           else if (c2.doubt) out.push({ text: mm[1], kind: 'incierto', line: i, start: off + mm.index + 1, end: off + mm.index + 1 + mm[1].length });

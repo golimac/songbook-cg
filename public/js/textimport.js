@@ -99,20 +99,50 @@ export function pdfItemsToText(items) {
   gaps.sort(function (a, b) { return a - b; });
   var lh = gaps.length ? gaps[Math.floor(gaps.length / 4)] : fh * 1.2;
   if (!(lh > 0)) lh = fh * 1.2;
+  /* Cada línea: su texto con columnas y, por cada fragmento, dónde empieza en el texto y en la página */
+  lines.forEach(function (l) {
+    var str = '';
+    l.segs = [];
+    l.items.sort(function (a, b) { return a.x - b.x; }).forEach(function (it) {
+      var col = Math.round((it.x - minX) / cw);
+      if (col > str.length) str += new Array(col - str.length + 1).join(' ');
+      else if (str.length && /\S$/.test(str) && /^\S/.test(it.str)) str += ' ';
+      var t = it.str.replace(/^\s+/, function (m) { return col > str.length ? '' : m; });
+      l.segs.push({ start: str.length, x0: it.x, w: it.w, len: it.str.length, lead: it.str.length - t.length });
+      str += t;
+    });
+    l.text = str.replace(/\s+$/, '');
+  });
+  /* Con letra proporcional las columnas no coinciden con las de la letra: cada acorde se ubica sobre la letra que tiene debajo */
+  lines.forEach(function (l, idx) {
+    var nx = lines[idx + 1];
+    if (!nx || !isChordLine(l.text) || isChordLine(nx.text) || l.y - nx.y > lh * 1.7) return;
+    var placed = [];
+    l.items.forEach(function (it) {
+      var re = /\S+/g, m;
+      while ((m = re.exec(it.str))) {
+        var x = it.x + (m.index / it.str.length) * it.w, col = 0, best = null;
+        nx.segs.forEach(function (sg) { if (x >= sg.x0 - 0.01 && x <= sg.x0 + sg.w + 0.01) best = sg; });
+        if (!best) nx.segs.forEach(function (sg) { if (x >= sg.x0) best = sg; });
+        if (best) col = best.start + Math.max(0, Math.round((x - best.x0) / (best.w || 1) * best.len) - best.lead);
+        placed.push({ col: Math.min(col, nx.text.length), tk: m[0] });
+      }
+    });
+    placed.sort(function (a, b) { return a.col - b.col; });
+    var out = '';
+    placed.forEach(function (pc) {
+      var c = Math.max(pc.col, out.length ? out.length + 1 : 0);
+      out += new Array(c - out.length + 1).join(' ') + pc.tk;
+    });
+    l.text = out;
+  });
   var out = [];
   lines.forEach(function (l, idx) {
     if (idx > 0) {
       var blanks = Math.round((lines[idx - 1].y - l.y) / lh) - 1;
       for (var b = 0; b < Math.min(blanks, 2); b++) out.push('');
     }
-    var s = '';
-    l.items.sort(function (a, b) { return a.x - b.x; }).forEach(function (it) {
-      var col = Math.round((it.x - minX) / cw);
-      if (col > s.length) s += new Array(col - s.length + 1).join(' ');
-      else if (s.length && /\S$/.test(s) && /^\S/.test(it.str)) s += ' ';
-      s += it.str.replace(/^\s+/, function (m) { return col > s.length ? '' : m; });
-    });
-    out.push(s.replace(/\s+$/, ''));
+    out.push(l.text);
   });
   return out.join('\n');
 }
@@ -128,7 +158,11 @@ async function pdfToText(buf) {
       return { str: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: Math.abs(it.transform[3]) || it.height };
     })));
   }
-  return pages.join('\n\n');
+  return pages.reduce(function (acc, pg, i) {
+    if (!i) return pg;
+    var lastLine = acc.split('\n').filter(function (x) { return /\S/.test(x); }).pop() || '';
+    return acc + (isChordLine(lastLine) ? '\n' : '\n\n') + pg;
+  }, '');
 }
 
 /* ---------- Un archivo → texto ---------- */
@@ -177,7 +211,35 @@ export function splitSongs(text) {
   });
   return songs;
 }
+/* Tablatura en texto (e|---0---): cada grupo de líneas se envuelve en {sot} … {eot} para que se vea tal cual */
+var TABLINE = /^\s*[eEBGDAa]\s*[|:]?\s*[-|][-\d|hpbrxs\/\\^~()<>.\s]*$/;
+function isTabLine(l) { return TABLINE.test(l) && (l.match(/-/g) || []).length >= 4; }
+export function wrapTabs(text) {
+  var lines = String(text || '').split('\n'), out = [], i = 0;
+  while (i < lines.length) {
+    if (isTabLine(lines[i])) {
+      var j = i;
+      while (j < lines.length && isTabLine(lines[j])) j++;
+      if (j - i >= 3) { out.push('{sot}'); for (var k = i; k < j; k++) out.push(lines[k].replace(/\s+$/, '')); out.push('{eot}'); i = j; continue; }
+    }
+    out.push(lines[i]); i++;
+  }
+  return out.join('\n');
+}
+/* Acordes sobre la letra → [Am], sin tocar las tablaturas */
+export function convertBody(text) {
+  var lines = wrapTabs(text).split('\n'), out = [], seg = [], n = 0, inTab = false;
+  function flush() { if (seg.length) { var r = chordsAbove(seg.join('\n')); out.push(r.text); n += r.count; seg = []; } }
+  lines.forEach(function (l) {
+    if (/^\{sot\}$/.test(l.trim())) { flush(); inTab = true; out.push(l); }
+    else if (/^\{eot\}$/.test(l.trim())) { inTab = false; out.push(l); }
+    else if (inTab) out.push(l);
+    else seg.push(l);
+  });
+  flush();
+  return { text: out.join('\n'), count: n };
+}
 export function toSong(part, fileName) {
-  var r = chordsAbove(part.text);
+  var r = convertBody(part.text);
   return { title: part.title || baseName(fileName) || 'Sin título', body: r.text, chordLines: r.count, source: fileName || '' };
 }

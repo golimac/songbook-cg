@@ -192,6 +192,11 @@ console.log('--- ChordPro ---\n' + cp);
   eq('sin acordes no cambia', C.chordsAbove('Hola mundo\notra línea').count, 0);
 }
 
+/* varios acordes en un mismo corchete no son dudas; uno ilegible dentro sí */
+eq('[Em - Em/Eb] no es duda', C.listDoubts('a m[Em - Em/Eb]iles').length, 0);
+eq('[Em - Xyz] marca solo el ilegible', C.listDoubts('a m[Em - Xyz]iles').map((d) => d.text), ['Xyz']);
+eq('acordes pegados con guion en una línea sobre la letra', C.chordsAbove('   Em-Em/Eb  Em\na miles de años').text, 'a m[Em - Em/Eb]iles de añ[Em]os');
+
 /* formas de la biblioteca de acordes */
 {
   const mine = { frets: [-1, 0, 2, 2, 1, 0], base: 1, barre: null };

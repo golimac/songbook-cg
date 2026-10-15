@@ -1,6 +1,6 @@
 // Lectura de archivos de texto, Word y PDF, y separación de canciones.
 import { deflateRawSync } from 'node:zlib';
-import { extOf, decodeText, docxToText, readZipEntry, pdfItemsToText, splitSongs, toSong, extractText, cleanText } from '../public/js/textimport.js';
+import { wrapTabs, convertBody, extOf, decodeText, docxToText, readZipEntry, pdfItemsToText, splitSongs, toSong, extractText, cleanText } from '../public/js/textimport.js';
 
 const fails = [];
 const ok = (n, c) => { console.log((c ? 'ok    ' : 'FALLA ') + n); if (!c) fails.push(n); };
@@ -67,6 +67,24 @@ const ts = toSong(sp[0], 'cancionero.pdf');
 eq('toSong convierte acordes sobre la letra', ts.body, '[Am]Hola [F]mundo');
 eq('toSong cuenta las líneas de acordes', ts.chordLines, 1);
 eq('toSong usa el nombre del archivo si no hay título', toSong({ title: '', text: 'x' }, 'Mi_cancion.txt').title, 'Mi cancion');
+
+/* tablatura en texto */
+const tab = 'Intro:\n\nC/E   G/B\ne: ---0-----0---|\nB: -----5-3-----\nG: -0-----0-----\nD: ---------0---\nA: -3-----2-----\nE: --------------\n\nC    G\nHola mundo';
+const wt = wrapTabs(tab).split('\n');
+eq('la tablatura se envuelve en {sot} y {eot}', [wt[3], wt[10]], ['{sot}', '{eot}']);
+eq('dos líneas sueltas parecidas a tablatura no se envuelven', wrapTabs('e: ----\nB: ----').includes('{sot}'), false);
+const cb = convertBody(tab);
+const cl = cb.text.split('\n');
+eq('el acorde sobre la tablatura queda como línea de acordes', cl[2], '> C/E G/B');
+eq('la tablatura no se toca', cl.slice(4, 10).every((l, i) => l === tab.split('\n')[3 + i]), true);
+eq('la letra de después sí se convierte', cl[cl.length - 1], '[C]Hola [G]mundo'.replace('[C]Hola [G]mundo', '[C]Hola [G]mundo'));
+
+/* PDF con letra proporcional: el acorde se ubica sobre la letra que tiene debajo */
+const prop = pdfItemsToText([
+  { str: 'C     G', x: 10, y: 700, w: 7 * 7, h: 10 },
+  { str: 'Tu estabas aqui', x: 10, y: 688, w: 15 * 5, h: 10 }
+]);
+eq('proporcional: G cae donde empieza lo que hay debajo', prop.split('\n')[0].indexOf('G'), Math.round((10 + (6 / 7) * 49 - 10) / (75 / 15)));
 
 if (fails.length) { console.log('\nFALLARON:\n' + fails.join('\n')); process.exit(1); }
 console.log('\ntodas las pruebas pasan');
