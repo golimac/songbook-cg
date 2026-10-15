@@ -56,15 +56,17 @@ export async function handleSong(req, fetchFn) {
     if (!r.ok) throw new Error('index ' + r.status);
     html = await r.text();
   } catch (e) { return { status: 502, type: 'text/plain; charset=utf-8', body: 'No se pudo cargar la aplicación.' }; }
-  let song = null;
+  let song = null, why = 'id inválido';
   if (/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
     try {
       const url = 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(firebaseConfig.projectId) +
         '/databases/(default)/documents/songs/' + encodeURIComponent(id) + '?key=' + encodeURIComponent(firebaseConfig.apiKey);
-      const r = await fetchFn(url);
-      if (r.ok) { const s = fromFirestore(await r.json()); if (s.status === 'revisada') song = s; }
-    } catch (e) { /* vista genérica */ }
+      // Referer: las claves web de Firebase suelen limitarse por sitio y una llamada del servidor no trae ninguno.
+      const r = await fetchFn(url, { headers: { referer: origin + '/' } });
+      if (r.ok) { const s = fromFirestore(await r.json()); if (s.status === 'revisada') { song = s; why = 'ok'; } else why = 'la canción no está revisada'; }
+      else why = 'Firestore respondió ' + r.status;
+    } catch (e) { why = 'error al leer Firestore'; }
   }
   const tags = buildTags(song, origin + '/c/' + encodeURIComponent(id));
-  return { status: 200, type: 'text/html; charset=utf-8', body: injectMeta(html, tags) };
+  return { status: 200, type: 'text/html; charset=utf-8', body: injectMeta(html, tags).replace('<head>', '<head>\n<!-- vista previa: ' + why + ' -->') };
 }
