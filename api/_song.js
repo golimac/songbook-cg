@@ -27,10 +27,13 @@ export function describe(song) {
 export function buildTags(song, url) {
   const title = song && song.title ? song.title + (song.artist ? ' — ' + song.artist : '') : SITE;
   const desc = song && song.title ? describe(song) : 'Cancionero personal con letras y acordes.';
-  const cover = song && /^https:\/\/[^\s"'<>]+$/.test(song.cover || '') ? song.cover : '';
+  let cover = song && /^https:\/\/[^\s"'<>]+$/.test(song.cover || '') ? song.cover : '';
+  // WhatsApp dibuja la tarjeta compacta (miniatura a la izquierda) cuando la imagen mide menos de unos 300 px.
+  // Las carátulas de Apple traen el tamaño en la ruta, así que se pide una de 200.
+  if (/\/\d+x\d+(bb|sr)?\.(jpg|png)$/.test(cover)) cover = cover.replace(/\/\d+x\d+(bb|sr)?\.(jpg|png)$/, '/200x200bb.$2');
   const tags = [
     ['og:site_name', SITE], ['og:type', 'website'], ['og:title', title], ['og:description', desc], ['og:url', url],
-    ...(cover ? [['og:image', cover]] : []),
+    ...(cover ? [['og:image', cover], ['og:image:width', '200'], ['og:image:height', '200']] : []),
     ['twitter:card', 'summary'], ['twitter:title', title], ['twitter:description', desc],
     ...(cover ? [['twitter:image', cover]] : [])
   ];

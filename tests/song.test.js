@@ -14,6 +14,7 @@ const rev = S({ title: 'Wish "You" <Were> Here', artist: 'Pink Floyd', album: 'W
 
 let o = await handleSong(req('s1'), mk(rev));
 ok('una canción revisada lleva título, artista y carátula', o.status === 200 && /property="og:title" content="Wish &quot;You&quot; &lt;Were&gt; Here — Pink Floyd"/.test(o.body) && /property="og:image" content="https:\/\/is1\.mzstatic\.com/.test(o.body));
+ok('la carátula de Apple se pide en 200 px para la tarjeta compacta', /og:image" content="https:\/\/is1\.mzstatic\.com\/x\/200x200bb\.jpg"/.test(o.body));
 ok('describe con álbum, año y tonalidad', /Letra y acordes · Wish You Were Here \(1975\) · Tonalidad G/.test(o.body));
 ok('la dirección y el título de la pestaña', /og:url" content="https:\/\/songbook\.example\/c\/s1"/.test(o.body) && /<title>Wish &quot;You&quot; &lt;Were&gt; Here · Songbook CG<\/title>/.test(o.body));
 ok('conserva el resto de la aplicación', /id="view"/.test(o.body) && /<meta name="robots"/.test(o.body));
