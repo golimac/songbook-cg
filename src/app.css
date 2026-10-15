@@ -160,6 +160,12 @@
   .chprog { @apply -mt-2 mb-4; }
   .chadd .f { @apply flex-1; min-width: 220px; max-width: 360px; }
   .chgrid { @apply grid gap-4; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .dgnames { @apply flex flex-wrap items-center gap-1.5; }
+  .dgn-t { @apply text-xs font-semibold text-mute mr-1; }
+  .dgn { @apply font-mono text-[13px] border border-rule rounded-full px-2.5 py-0.5 bg-card text-ink; }
+  button.dgn { @apply cursor-pointer; }
+  button.dgn:hover { @apply border-spruce; }
+  .dgn.cur { @apply bg-spruce text-(--accent-ink) border-spruce; }
   .chlink { @apply flex flex-row items-center gap-3 w-full text-left cursor-pointer py-3; grid-column: 1 / -1; }
   .chlink .chl-t { @apply font-display font-semibold text-lg text-ink; }
   .chlink .bx-n { @apply ml-auto; }

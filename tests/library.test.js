@@ -149,6 +149,13 @@ ok('cancelar no guarda nada', saved.length === 0);
 click($('[data-chdel="Am7"][data-i="0"]'));
 ok('Quitar una posición del catálogo guarda la lista completa menos esa', saved.length === 1 && saved[0][0] === 'Am7' && saved[0][1].length === nAm7 - 1 && $$('#chdet figure').length === nAm7 - 1);
 click($('[data-chadd="Am7"]'));
+ok('el editor de diagramas sugiere nombres', $$('#dgNames .dgn').length >= 1 && $$('#dgNames .dgn').some((x) => x.textContent === 'Am7' && x.classList.contains('cur')));
+const other = $$('#dgNames button.dgn').find((x) => x.textContent !== 'Am7');
+if (other) {
+  click(other);
+  ok('tocar otro nombre cambia el acorde donde se guarda', $('#dgTitle').textContent === 'Diagrama de ' + other.textContent);
+  click($$('#dgNames button.dgn').find((x) => x.textContent === 'Am7') || other);
+}
 click($('#dgSave'));
 ok('agregar una posición que ya existe guarda la lista sin repetirla y cierra', saved.length === 2 && saved[1][0] === 'Am7' && saved[1][1].length === nAm7 - 1 && $('#dgModal').hidden && !$('.toast.err'));
 click($('#dgCancel'));

@@ -551,8 +551,94 @@ function listDoubts(body) {
   return out;
 }
 
+/* ---------- Nombres posibles de un diagrama (afinación estándar, cuerdas 6 a 1) ---------- */
+var OPEN_PC = [4, 9, 2, 7, 11, 4];
+var NAME_Q = [
+  ['', [0, 4, 7]], ['m', [0, 3, 7]], ['7', [0, 4, 7, 10]], ['maj7', [0, 4, 7, 11]], ['m7', [0, 3, 7, 10]],
+  ['6', [0, 4, 7, 9]], ['m6', [0, 3, 7, 9]], ['sus4', [0, 5, 7]], ['sus2', [0, 2, 7]], ['4', [0, 4, 5, 7]],
+  ['aug', [0, 4, 8]], ['dim', [0, 3, 6]], ['m7b5', [0, 3, 6, 10]], ['dim7', [0, 3, 6, 9]],
+  ['7sus4', [0, 5, 7, 10]], ['add9', [0, 2, 4, 7]], ['madd9', [0, 2, 3, 7]], ['9', [0, 2, 4, 7, 10]],
+  ['maj9', [0, 2, 4, 7, 11]], ['m9', [0, 2, 3, 7, 10]], ['mmaj7', [0, 3, 7, 11]], ['7#5', [0, 4, 8, 10]],
+  ['7b5', [0, 4, 6, 10]], ['7b9', [0, 1, 4, 7, 10]], ['7#9', [0, 3, 4, 7, 10]], ['69', [0, 2, 4, 7, 9]], ['5', [0, 7]]
+];
+var LETTERS7 = ['C', 'D', 'E', 'F', 'G', 'A', 'B'], NATPC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+var STEPS = { 0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 5, 9: 5, 10: 6, 11: 6 };
+function rootSpell(pc, minor) {
+  return ['C', 'C#', 'D', minor ? 'Eb' : 'Eb', 'E', 'F', 'F#', 'G', minor ? 'G#' : 'Ab', 'A', 'Bb', 'B'][pc];
+}
+/* Escribe la nota que está a "interval" semitonos de la raíz, con la letra que le toca por su grado */
+function spellAbove(rootName, interval, steps) {
+  var li = LETTERS7.indexOf(rootName.charAt(0));
+  var rpc = mod12(NATPC[rootName.charAt(0)] + (rootName.charAt(1) === '#' ? 1 : rootName.charAt(1) === 'b' ? -1 : 0));
+  var target = mod12(rpc + interval), letter = LETTERS7[(li + steps) % 7];
+  var d = mod12(target - NATPC[letter] + 6) - 6;
+  return d === 0 ? letter : d === 1 ? letter + '#' : d === -1 ? letter + 'b' : (SHARP[target]);
+}
+function nameShape(frets) {
+  var pcs = [], bass = -1, seen = {};
+  for (var s = 0; s < 6; s++) {
+    var f = frets[s];
+    if (f == null || f < 0) continue;
+    var pc = (OPEN_PC[s] + f) % 12;
+    if (bass < 0) bass = pc;
+    if (!seen[pc]) { seen[pc] = 1; pcs.push(pc); }
+  }
+  if (pcs.length < 2) return [];
+  var out = [], names = {};
+  function put(name, rank, ord, omit) {
+    if (names[name] != null || !parseChord(name)) return;
+    names[name] = out.length; out.push({ name: name, rank: rank, ord: ord, omit: omit });
+  }
+  /* 0 = no cabe, 1 = cabe completo, 2 = cabe sin la quinta */
+  function fits(set, F) {
+    for (var k = 0; k < set.length; k++) if (F.indexOf(set[k]) < 0) return 0;
+    var omitted = false;
+    for (var j = 0; j < F.length; j++) if (set.indexOf(F[j]) < 0) { if (F[j] === 7 && F.length > 2 && set.length >= 3) omitted = true; else return 0; }
+    return omitted ? 2 : 1;
+  }
+  function stepsFor(F, iv) { return iv === 6 && F.indexOf(7) < 0 ? 4 : STEPS[iv]; }
+  function build(set, r, q, F, bassPc, foreign) {
+    var minor = /^(m(?!aj)|dim)/.test(q), rn = rootSpell(r, minor), base = rn + q;
+    var bi = mod12(bassPc - r);
+    if (bi === 0) return q === '9' ? [[base, 0], [rn + '7/9', 0.5]] : [[base, 0]];
+    var bn = spellAbove(rn, bi, foreign ? STEPS[bi] : stepsFor(F, bi));
+    var res = [[base + '/' + bn, foreign ? 2 : 1]];
+    if (foreign && bi === 11 && /^m(?!aj)/.test(q) && /[#b]/.test(bn)) { /* el bajo cromático Em - Em/D# - Em/D se escribe también con bemol: Em/Eb */
+      var alt = bn.charAt(1) === '#' ? FLAT[bassPc] : SHARP[bassPc];
+      if (alt !== bn) res.push([base + '/' + alt, 2.5]);
+    }
+    return res;
+  }
+  pcs.forEach(function (r, ri) {
+    var set = pcs.map(function (p) { return mod12(p - r); });
+    NAME_Q.forEach(function (nq, qi) {
+      var f = fits(set, nq[1]);
+      if (!f) return;
+      if (nq[0] === '5' && pcs.length !== 2) return;
+      if (pcs.length === 2 && nq[0] !== '5') return;
+      build(set, r, nq[0], nq[1], bass, false).forEach(function (x) { put(x[0], x[1], qi * 12 + ri, f === 2); });
+    });
+  });
+  /* el bajo es una nota ajena al resto: D/C#, C/B, Am/F# */
+  var rest = pcs.filter(function (p) { return p !== bass; });
+  if (rest.length >= 3 && rest.indexOf(bass) < 0) {
+    rest.forEach(function (r, ri) {
+      var set = rest.map(function (p) { return mod12(p - r); });
+      NAME_Q.forEach(function (nq, qi) {
+        var f = fits(set, nq[1]);
+        if (!f || nq[0] === '5' || nq[1].length > 4) return;
+        build(set, r, nq[0], nq[1], bass, true).forEach(function (x) { put(x[0], x[1], qi * 12 + ri, f === 2); });
+      });
+    });
+  }
+  /* un nombre que solo cabe quitando la quinta se muestra únicamente si no hay otro */
+  if (out.some(function (x) { return !x.omit; })) out = out.filter(function (x) { return !x.omit; });
+  out.sort(function (a, b) { return a.rank - b.rank || a.ord - b.ord; });
+  return out.slice(0, 8).map(function (x) { return x.name; });
+}
+
 export {
   parseChord, chordToString, chordPc, transposeChord, parseKey, flatsFor, keyName,
   tokenizeLine, segTokens, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
-  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, setUserShapes, chordKey, parseFill, fillTab, catalogNames, catQual
+  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, setUserShapes, chordKey, parseFill, fillTab, catalogNames, catQual, nameShape
 };

@@ -197,6 +197,35 @@ eq('[Em - Em/Eb] no es duda', C.listDoubts('a m[Em - Em/Eb]iles').length, 0);
 eq('[Em - Xyz] marca solo el ilegible', C.listDoubts('a m[Em - Xyz]iles').map((d) => d.text), ['Xyz']);
 eq('acordes pegados con guion en una línea sobre la letra', C.chordsAbove('   Em-Em/Eb  Em\na miles de años').text, 'a m[Em - Em/Eb]iles de añ[Em]os');
 
+/* nombres posibles de un diagrama */
+{
+  const nm = (f) => C.nameShape(f);
+  eq('C abierto', nm([-1, 3, 2, 0, 1, 0])[0], 'C');
+  eq('Am abierto', nm([-1, 0, 2, 2, 1, 0])[0], 'Am');
+  eq('Am7 también como C/A', nm([-1, 0, 2, 0, 1, 0]).slice(0, 3), ['Am7', 'C6/A', 'C/A']);
+  eq('inversión: D/F#', nm([2, -1, 0, 2, 3, 2])[0], 'D/F#');
+  eq('bajo ajeno: D con Do# en el bajo', nm([-1, 4, 4, 2, 3, -1]), ['Dmaj7/C#', 'D/C#']);
+  eq('bajo cromático de Em con las dos escrituras', nm([-1, 6, 5, 0, 0, 0]).filter((x) => /^Em\//.test(x)).sort(), ['Em/D#', 'Em/Eb']);
+  eq('cuerdas mudas no cuentan', nm([-1, -1, 0, 2, 3, 2])[0], 'D');
+  eq('C4 del cancionero (con mi grave) es C con cuarta', nm([0, 3, 3, 0, 1, 0])[0], 'C4/E');
+  eq('solo una nota no tiene nombre', nm([-1, -1, -1, -1, 1, -1]), []);
+  eq('quinta sola: C5', nm([-1, 3, 5, -1, -1, -1])[0], 'C5');
+  eq('G9 también como G7/9', nm([3, 0, 0, 2, 0, 1]).slice(0, 2), ['G9', 'G7/9']);
+  eq('todo nombre sugerido es un acorde que la aplicación entiende', nm([-1, 3, 5, 3, 5, 3]).every((x) => C.parseChord(x)), true);
+  /* cada diagrama que ya trae la aplicación debe incluir su nombre entre las sugerencias */
+  const key = (n) => { const c = C.parseChord(n); const b = c.bass && /^[A-G]/.test(c.bass) ? C.chordPc(C.parseChord(c.bass)) : ''; return C.chordPc(c) + '|' + C.catQual(c.qual) + '|' + b; };
+  const bad = [];
+  C.catalogNames().forEach((name) => {
+    const c = C.parseChord(name); if (!c) return;
+    C.shapesFor(c, true).forEach((sh) => {
+      const want = key(name), part = want.split('|').slice(0, 2).join('|');
+      if (name === 'Em/G') return; /* 320000 suena como Em7/G: el cancionero lo llama Em/G */
+      if (!nm(sh.frets).some((s) => key(s) === want || (!c.bass && key(s).indexOf(part) === 0))) bad.push(name + ' ' + sh.frets.join(','));
+    });
+  });
+  eq('los diagramas de fábrica traen su nombre en las sugerencias', bad, []);
+}
+
 /* formas de la biblioteca de acordes */
 {
   const mine = { frets: [-1, 0, 2, 2, 1, 0], base: 1, barre: null };

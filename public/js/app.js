@@ -1,6 +1,6 @@
 import {
   parseChord, chordToString, transposeChord, parseKey, flatsFor, keyName, parseBody, collectChords,
-  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove, setUserShapes, chordKey, fillTab, catalogNames, catQual
+  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove, setUserShapes, chordKey, fillTab, catalogNames, catQual, nameShape
 } from './core.js';
 import { imaging as realImaging } from './photo.js';
 import { createImporter } from './import.js';
@@ -934,7 +934,23 @@ function opts(from, to, label, sel) {
   for (var i = from; i <= to; i++) s += '<option value="' + i + '"' + (i === sel ? ' selected' : '') + '>' + label(i) + '</option>';
   return s;
 }
+/* Trastes que suenan: una cejilla cubre las cuerdas al aire o más bajas de su tramo */
+function dgSounding() {
+  var f = dgS.frets.slice();
+  if (dgS.barre.on) for (var i = Math.min(dgS.barre.from, dgS.barre.to); i <= Math.max(dgS.barre.from, dgS.barre.to); i++) if (f[i] >= 0 && f[i] < dgS.barre.fret) f[i] = dgS.barre.fret;
+  return f;
+}
+function renderDgNames() {
+  var el = $('#dgNames'); if (!el) return;
+  var names = nameShape(dgSounding()), can = !!dgLib && dgLib.idx == null, curN = dgLib ? dgLib.name : dgS.orig, ck = eqKey(curN);
+  if (!names.length) { el.innerHTML = '<span class="hint">Pon al menos dos notas y aquí aparecen los nombres posibles.</span>'; return; }
+  el.innerHTML = '<span class="dgn-t">Podría ser</span>' + names.map(function (n) {
+    var cur = eqKey(n) === ck ? ' cur' : '';
+    return can ? '<button type="button" class="dgn' + cur + '" data-dgname="' + esc(n) + '">' + esc(n) + '</button>' : '<span class="dgn' + cur + '">' + esc(n) + '</span>';
+  }).join('') + (can ? '<span class="hint">Toca un nombre para guardar la forma con él.</span>' : '');
+}
 function renderDg() {
+  renderDgNames();
   $('#dgBig').innerHTML = dgSVG(dgOut(), 230, true);
   $('#dgBase').value = dgS.base;
   $('#dgBarreOn').checked = dgS.barre.on;
@@ -1244,6 +1260,13 @@ $('#dgBig').addEventListener('click', function (e) {
     dgS.frets[s] = dgS.frets[s] === f ? 0 : f;
   }
   renderDg();
+});
+$('#dgNames').addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-dgname]');
+  if (!b || !dgLib || dgLib.idx != null) return;
+  dgLib.name = libKey(b.getAttribute('data-dgname'));
+  $('#dgTitle').textContent = 'Diagrama de ' + b.getAttribute('data-dgname');
+  renderDgNames();
 });
 $('#dgBase').addEventListener('change', function (e) {
   var v = Math.max(1, Math.min(15, parseInt(e.target.value, 10) || 1));
