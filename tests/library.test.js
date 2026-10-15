@@ -167,6 +167,17 @@ click($('[data-chsee="C4"]'));
 ok('una lista guardada reemplaza a la del catálogo', $$('#chdet figure').length === 1);
 click($('[data-chdel="C4"][data-i="0"]'));
 ok('Quitar la última posición vuelve a las originales', saved[saved.length - 1][0] === 'C4' && saved[saved.length - 1][1] === null);
+
+chordCb([{ name: 'Baug', shapes: [{ frets: [0, 2, 1, 0, 0, 0], base: 1, barre: null }] }]);
+saved.length = 0;
+click($('[data-chsee="Baug"]'));
+click($('[data-chedit="Baug"][data-i="0"]'));
+const mv = $$('#dgNames button.dgn').find((x) => x.textContent === 'Emmaj7');
+ok('al editar una forma, el editor sugiere el nombre que le corresponde', !!mv && /pasar esta forma/.test($('#dgNames').textContent));
+click(mv);
+ok('el título avisa que la forma pasará', /Baug · pasará a Emmaj7/.test($('#dgTitle').textContent));
+click($('#dgSave'));
+ok('la forma pasa a Emmaj7 y se quita de Baug', saved.some((x) => x[0] === 'Emmaj7' && x[1].length === 1 && x[1][0].frets.join() === '0,2,1,0,0,0') && saved.some((x) => x[0] === 'Baug' && x[1] === null) && $('#dgModal').hidden);
 click($('[data-lib="home"]'));
 click($('[data-lib="pendientes"]'));
 

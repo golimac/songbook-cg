@@ -246,6 +246,7 @@ function qualKey(q) {
   if (q === '4') return 'sus4';
   if (q === '2') return 'sus2';
   if (q === 'M7' || q === '7M') return 'maj7';
+  if (q === 'mM7' || q === 'm7M') return 'mmaj7';
   if (q === 'min') return 'm';
   if (q === 'min7') return 'm7';
   if (q === 'ø' || q === 'ø7' || q === 'm7b5') return 'm7b5';

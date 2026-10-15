@@ -896,7 +896,20 @@ function openDgLib(name, idx) {
   $('#dgBase').focus();
 }
 function saveLibShape(out) {
-  var n = dgLib.name, shapes = curShapes(n), f = out.frets.join(',');
+  var n = dgLib.name, f = out.frets.join(',');
+  if (dgLib.idx != null && dgLib.moveTo && eqKey(dgLib.moveTo) !== eqKey(n)) {
+    /* La forma pasa a otro acorde: se agrega allí (sin repetirla) y se quita de este */
+    var t = dgLib.moveTo, tl = curShapes(t);
+    if (!tl.some(function (x) { return x.frets.join(',') === f; })) tl.push(out);
+    chordLib[t] = tl; api.saveChord(t, tl).catch(failSave);
+    var rest = curShapes(n).filter(function (x, i) { return i !== dgLib.idx; });
+    if (rest.length) { chordLib[n] = rest; api.saveChord(n, rest).catch(failSave); }
+    else { delete chordLib[n]; api.deleteChord(n).catch(failSave); }
+    onChords();
+    toast('La forma pasó a ' + t + '.');
+    return true;
+  }
+  var shapes = curShapes(n);
   var dup = shapes.some(function (x, i) { return i !== dgLib.idx && x.frets.join(',') === f; });
   if (dup && dgLib.idx != null) { toast('Esa posición ya está en la lista de ' + n + '.', true); return false; }
   if (dup) {
@@ -942,12 +955,12 @@ function dgSounding() {
 }
 function renderDgNames() {
   var el = $('#dgNames'); if (!el) return;
-  var names = nameShape(dgSounding()), can = !!dgLib && dgLib.idx == null, curN = dgLib ? dgLib.name : dgS.orig, ck = eqKey(curN);
+  var names = nameShape(dgSounding()), can = !!dgLib, curN = dgLib ? (dgLib.moveTo || dgLib.name) : dgS.orig, ck = eqKey(curN);
   if (!names.length) { el.innerHTML = '<span class="hint">Pon al menos dos notas y aquí aparecen los nombres posibles.</span>'; return; }
   el.innerHTML = '<span class="dgn-t">Podría ser</span>' + names.map(function (n) {
     var cur = eqKey(n) === ck ? ' cur' : '';
     return can ? '<button type="button" class="dgn' + cur + '" data-dgname="' + esc(n) + '">' + esc(n) + '</button>' : '<span class="dgn' + cur + '">' + esc(n) + '</span>';
-  }).join('') + (can ? '<span class="hint">Toca un nombre para guardar la forma con él.</span>' : '');
+  }).join('') + (can ? '<span class="hint">' + (dgLib.idx == null ? 'Toca un nombre para guardar la forma con él.' : 'Toca un nombre para pasar esta forma a ese acorde.') + '</span>' : '');
 }
 function renderDg() {
   renderDgNames();
@@ -1263,9 +1276,11 @@ $('#dgBig').addEventListener('click', function (e) {
 });
 $('#dgNames').addEventListener('click', function (e) {
   var b = e.target.closest && e.target.closest('[data-dgname]');
-  if (!b || !dgLib || dgLib.idx != null) return;
-  dgLib.name = libKey(b.getAttribute('data-dgname'));
-  $('#dgTitle').textContent = 'Diagrama de ' + b.getAttribute('data-dgname');
+  if (!b || !dgLib) return;
+  var nm = b.getAttribute('data-dgname');
+  if (dgLib.idx == null) { dgLib.name = libKey(nm); $('#dgTitle').textContent = 'Diagrama de ' + nm; }
+  else if (eqKey(nm) === eqKey(dgLib.name)) { dgLib.moveTo = null; $('#dgTitle').textContent = 'Diagrama de ' + dgLib.name; }
+  else { dgLib.moveTo = libKey(nm); $('#dgTitle').textContent = 'Diagrama de ' + dgLib.name + ' · pasará a ' + nm; }
   renderDgNames();
 });
 $('#dgBase').addEventListener('change', function (e) {
