@@ -127,9 +127,10 @@ export function createImporter(d) {
       }, function (e) { fail(e, false); });
       function fail(e, empty) {
         if (!mine(run)) return;
-        var blocked = empty || /content filter/i.test(errMsg(e));
+        var slow = /\b(504|502|408)\b|timeout|tard/i.test(errMsg(e));
+        var blocked = empty || slow || /content filter/i.test(errMsg(e));
         view.innerHTML = '<h1>No se pudo leer</h1><p class="hint" style="margin-top:6px">' + esc(title) + ': ' + esc(errMsg(e)) + '</p>' +
-          (blocked ? '<p class="hint" style="margin-top:6px">El modelo no entregó el texto. A veces pasa con letras muy conocidas y suele ceder al leer la canción en dos partes. Si no, puedes escribirla a mano con la foto al lado.</p>' : '') +
+          (slow ? '<p class="hint" style="margin-top:6px">La lectura pasó del tiempo que da el servidor (60 segundos). Leer en dos partes la reparte en dos llamadas más cortas.</p>' : blocked ? '<p class="hint" style="margin-top:6px">El modelo no entregó el texto. A veces pasa con letras muy conocidas y suele ceder al leer la canción en dos partes. Si no, puedes escribirla a mano con la foto al lado.</p>' : '') +
           '<div class="actions" style="margin-top:12px"><button class="btn primary" type="button" id="imRetry">Reintentar</button>' +
           (blocked ? '<button class="btn" type="button" id="imSplit">Leer en dos partes</button><button class="btn" type="button" id="imManual">Escribirla a mano</button>' : '') +
           '<button class="btn" type="button" id="imSkipSong">Saltar esta canción</button><button class="btn" type="button" id="imAbort">Terminar importación</button></div>';
