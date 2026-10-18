@@ -23,7 +23,7 @@ const metas = new Map(), bodies = new Map();
 let authCb, listCb;
 const emit = () => listCb && listCb([...metas].map(([id, m]) => ({ id, ...m })));
 const reads = [];
-let failNext = 0;
+let failNext = 0, emptyNext = 0;
 const SEG = { page_number: '52', page_header: '52 "E.C."', songs: [
   { title: 'La familia', box: { x: 0.05, y: 0.1, w: 0.4, h: 0.6 }, continues: null, note: '' },
   { title: 'Generaciones', box: { x: 0.5, y: 0.1, w: 0.4, h: 0.4 }, continues: null, note: '' },
@@ -48,6 +48,7 @@ const api = {
     reads.push(p);
     if (p.mode === 'segment') return SEG;
     if (failNext > 0) { failNext--; throw new Error('saldo insuficiente'); }
+    if (emptyNext > 0) { emptyNext--; return { title: 'X', artist: '', key: '', tuning: '', body: '', doubts: [], remarks: '' }; }
     const hint = p.hint || '';
     return /La familia/.test(hint) ? SONGS['La familia'] : SONGS['Generaciones'];
   }
@@ -105,6 +106,9 @@ click($('[data-del="3"]')); ok('quitar elimina el recuadro', $$('.bx').length ==
 failNext = 1;
 click($('#imGo')); await wait(30);
 ok('si falla la lectura ofrece reintentar', !!$('#imRetry') && /saldo insuficiente/.test($('h1').textContent + d.body.textContent));
+emptyNext = 1;
+click($('#imRetry')); await wait(30);
+ok('una respuesta sin letra ni acordes ofrece reintentar y leer en dos partes', !!$('#imRetry') && !!$('#imSplit') && /sin texto/.test(d.body.textContent));
 click($('#imRetry')); await wait(30);
 const tr = reads.filter((r) => r.mode === 'transcribe');
 ok('une el recuadro continuación con su canción', tr[1].images.length === 2);
