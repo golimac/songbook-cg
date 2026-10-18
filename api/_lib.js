@@ -103,8 +103,16 @@ export function validateBody(b) {
   const size = images.reduce((n, i) => n + i.data.length, 0);
   if (size > MAX_BYTES) return { error: 'Las imágenes pesan demasiado; redúcelas e intenta de nuevo.' };
   const hint = typeof b.hint === 'string' ? b.hint.slice(0, 400) : '';
-  return { mode: b.mode, images, hint };
+  return { mode: b.mode, images, hint, chordsOnly: b.mode === 'transcribe' && b.chordsOnly === true };
 }
+
+// Modo "solo acordes": el modelo lee la estructura y los acordes y deja la letra para que la escriba la persona.
+export const CHORDS_ONLY = `MODO SOLO ACORDES. En esta lectura no transcribes ninguna palabra de la letra, ni siquiera las primeras. Solo entregas la estructura y los acordes:
+- Cada línea del papel que trae acordes sobre la letra se escribe como una línea de acordes sueltos, separados por espacios, con los espacios necesarios para que cada acorde quede en la misma posición horizontal relativa que tiene en el papel (un carácter por cada letra de la letra impresa). Debajo va una línea vacía, donde la persona escribirá la letra.
+- Una línea del papel que solo trae letra, sin acordes, se escribe como una línea vacía.
+- La introducción se escribe "{intro: G - D - Em - C}", las indicaciones entre paréntesis como "{c: texto}" y las tablaturas entre "{sot}" y "{eot}", como en el formato normal.
+- Las dudas de acordes siguen igual: "Am?" y lo ilegible se copia tal cual.
+- En remarks escribe "Solo acordes: la letra queda por escribir." además de lo que corresponda.`;
 
 export function buildRequest(parsed, env, retry) {
   const tool = TOOLS[parsed.mode];
@@ -117,14 +125,15 @@ export function buildRequest(parsed, env, retry) {
     : (multi
       ? 'Estas imágenes son partes consecutivas de UNA sola canción, en orden. Transcríbela completa como una canción.'
       : 'Transcribe la canción de esta imagen.');
+  const askFinal = parsed.chordsOnly ? 'Lee de esta imagen solo la estructura y los acordes de la canción, sin ninguna palabra de la letra, como indican las instrucciones del modo solo acordes.' : ask;
   const content = parsed.images.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.media_type, data: i.data } }));
-  content.push({ type: 'text', text: ask + (parsed.hint ? '\n\nContexto del usuario: ' + parsed.hint : '') +
+  content.push({ type: 'text', text: askFinal + (parsed.hint ? '\n\nContexto del usuario: ' + parsed.hint : '') +
     (retry ? '\n\nIMPORTANTE: tu respuesta anterior no llamó a la herramienta. Responde solo llamando a ' + tool.name + '.' : '') });
   return {
     model,
     max_tokens: parsed.mode === 'segment' ? 2000 : 6000,
     // Algunos modelos no admiten forzar la herramienta (tool_choice "tool"), así que se pide en las instrucciones.
-    system: SYSTEM + '\n\nEntrega SIEMPRE el resultado llamando a la herramienta ' + tool.name + ', sin texto antes ni después.',
+    system: SYSTEM + (parsed.chordsOnly ? '\n\n' + CHORDS_ONLY : '') + '\n\nEntrega SIEMPRE el resultado llamando a la herramienta ' + tool.name + ', sin texto antes ni después.',
     tools: [tool],
     tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content }]

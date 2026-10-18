@@ -26,6 +26,9 @@ ok('rechaza imágenes enormes', !!validateBody({ mode: 'transcribe', images: ['d
 // solicitud al modelo
 const rq = buildRequest({ mode: 'transcribe', images: [{ media_type: 'image/jpeg', data: 'AA' }, { media_type: 'image/jpeg', data: 'BB' }], hint: 'Cancionero 1' }, env);
 ok('transcripción usa el modelo grande por defecto', rq.model === 'claude-opus-5-5');
+const rc = buildRequest({ mode: 'transcribe', chordsOnly: true, images: [{ media_type: 'image/jpeg', data: 'AA' }], hint: '' }, env);
+ok('solo acordes agrega sus instrucciones y no pide la letra', /MODO SOLO ACORDES/.test(rc.system) && /sin ninguna palabra de la letra/.test(rc.messages[0].content.slice(-1)[0].text) && !/MODO SOLO ACORDES/.test(rq.system));
+ok('chordsOnly solo vale al transcribir y como true', validateBody({ mode: 'transcribe', chordsOnly: true, images: ['data:image/jpeg;base64,AA'] }).chordsOnly === true && validateBody({ mode: 'transcribe', chordsOnly: 'si', images: ['data:image/jpeg;base64,AA'] }).chordsOnly === false);
 ok('segmentación usa el modelo medio por defecto', buildRequest({ mode: 'segment', images: [{ media_type: 'image/png', data: 'A' }], hint: '' }, env).model === 'claude-sonnet-5-5');
 ok('variables de entorno cambian el modelo', buildRequest({ mode: 'transcribe', images: [{ media_type: 'image/png', data: 'A' }], hint: '' }, { ANTHROPIC_MODEL: 'otro' }).model === 'otro');
 ok('pide la herramienta sin forzarla (tool_choice auto)', rq.tool_choice.type === 'auto' && rq.tools.length === 1 && rq.system.includes('report_song'));

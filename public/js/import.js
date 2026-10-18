@@ -128,16 +128,25 @@ export function createImporter(d) {
       function fail(e, empty) {
         if (!mine(run)) return;
         var slow = /\b(504|502|408)\b|timeout|tard/i.test(errMsg(e));
-        var blocked = empty || slow || /content filter/i.test(errMsg(e));
+        var blocked = empty || /content filter/i.test(errMsg(e));
         view.innerHTML = '<h1>No se pudo leer</h1><p class="hint" style="margin-top:6px">' + esc(title) + ': ' + esc(errMsg(e)) + '</p>' +
-          (slow ? '<p class="hint" style="margin-top:6px">La lectura pasó del tiempo que da el servidor (60 segundos). Leer en dos partes la reparte en dos llamadas más cortas.</p>' : blocked ? '<p class="hint" style="margin-top:6px">El modelo no entregó el texto. A veces pasa con letras muy conocidas y suele ceder al leer la canción en dos partes. Si no, puedes escribirla a mano con la foto al lado.</p>' : '') +
+          (slow ? '<p class="hint" style="margin-top:6px">La lectura pasó del tiempo que da el servidor (60 segundos). Leer en dos partes la reparte en dos llamadas más cortas.</p>' : blocked ? '<p class="hint" style="margin-top:6px">El modelo no entregó la letra de esta canción. Con Solo acordes lee la estructura y los acordes de la foto y la letra la escribes tú; con Escribirla a mano empiezas en blanco con la foto al lado.</p>' : '') +
           '<div class="actions" style="margin-top:12px"><button class="btn primary" type="button" id="imRetry">Reintentar</button>' +
-          (blocked ? '<button class="btn" type="button" id="imSplit">Leer en dos partes</button><button class="btn" type="button" id="imManual">Escribirla a mano</button>' : '') +
+          (blocked ? '<button class="btn" type="button" id="imChords">Solo acordes</button><button class="btn" type="button" id="imManual">Escribirla a mano</button>' : '') + (slow ? '<button class="btn" type="button" id="imSplit">Leer en dos partes</button>' : '') +
           '<button class="btn" type="button" id="imSkipSong">Saltar esta canción</button><button class="btn" type="button" id="imAbort">Terminar importación</button></div>';
         retry = step; skipSong = function () { gi++; step(); };
         manual = function () {
           results.push({ group: g, result: { title: g.title || '', artist: '', key: '', tuning: '', body: '', doubts: [], remarks: '' }, images: images });
           gi++; step();
+        };
+        chords = function () {
+          view.innerHTML = '<h1>Leyendo los acordes</h1><p class="hint" style="margin-top:6px">' + esc(title) + '. Tarda entre 20 y 60 segundos.</p>';
+          d.api.readPage({ mode: 'transcribe', chordsOnly: true, images: images, hint: hint }).then(function (r) {
+            if (!mine(run)) return;
+            if (!r || !String(r.body || '').trim()) { fail(new Error('El modelo devolvió la canción sin texto.'), true); return; }
+            results.push({ group: g, result: r, images: images });
+            gi++; step();
+          }, function (e2) { fail(e2, false); });
         };
         split = function () {
           view.innerHTML = '<h1>Leyendo en dos partes</h1><p class="hint" style="margin-top:6px">' + esc(title) + '. Tarda un poco más.</p>';
@@ -172,11 +181,12 @@ export function createImporter(d) {
         };
       }
     }
-    var retry = null, skipSong = null, manual = null, split = null;
+    var retry = null, skipSong = null, manual = null, split = null, chords = null;
     I.retry = function () { retry && retry(); };
     I.skipSong = function () { skipSong && skipSong(); };
     I.manual = function () { manual && manual(); };
     I.split = function () { split && split(); };
+    I.chords = function () { chords && chords(); };
     step();
   }
 
@@ -307,6 +317,7 @@ export function createImporter(d) {
     else if (id === 'imSkipSong') I.skipSong();
     else if (id === 'imManual') I.manual();
     else if (id === 'imSplit') I.split();
+    else if (id === 'imChords') I.chords();
     else if (id === 'imAbort') finish();
     else if (id === 'imBack') render();
     else if (id === 'imTGo') startTextReview();
