@@ -14,7 +14,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
-const META = ['title', 'artist', 'key', 'tuning', 'source', 'page', 'status', 'doubts', 'album', 'year', 'cover', 'chords'];
+const META = ['title', 'artist', 'key', 'tuning', 'source', 'page', 'status', 'doubts', 'album', 'year', 'cover', 'chords', 'audio'];
 
 export function createFirebaseApi() {
   const app = initializeApp(firebaseConfig);
@@ -119,6 +119,24 @@ export function createFirebaseApi() {
       if (!r.ok) throw new Error((j && j.error) || 'La búsqueda falló (' + r.status + ').');
       return j.results || [];
     },
+
+    // Audio propio en Cloudflare R2: busca archivos por nombre y pide el enlace temporal para reproducirlo.
+    async audioCall(payload) {
+      const u = auth.currentUser;
+      if (!u) throw new Error('Inicia sesión primero.');
+      const token = await u.getIdToken();
+      const r = await fetch('/api/audio', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+      let j = null;
+      try { j = await r.json(); } catch (e) { /* respuesta sin JSON */ }
+      if (!r.ok) throw new Error((j && j.error) || 'La solicitud de audio falló (' + r.status + ').');
+      return j;
+    },
+    async audioList(q) { return (await this.audioCall({ action: 'list', q })).files || []; },
+    async audioUrl(key) { return (await this.audioCall({ action: 'url', key })).url; },
 
     saveMany(songs) {
       const b = writeBatch(db);

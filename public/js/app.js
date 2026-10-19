@@ -603,7 +603,7 @@ function showSong(song) {
       '<div class="grp"><label class="chk"><input type="checkbox" id="dgToggle"' + (S.dg ? ' checked' : '') + '> Diagramas</label></div>' +
       '<div class="grp"><button class="btn" data-act="auto" id="autoBtn">Iniciar autoscroll</button><input type="range" id="dur" min="30" max="420" step="10" value="' + S.dur + '" aria-label="Duración del autoscroll"><output id="durv"></output></div>' +
     '</div>' +
-    '<div id="info"></div><div class="songgrid"><div class="dgs" id="dgStrip"></div><article class="song" id="songBody"></article></div>';
+    '<div id="info"></div><div id="audioBox"></div><div class="songgrid"><div class="dgs" id="dgStrip"></div><article class="song" id="songBody"></article></div>';
   refreshSong();
   window.scrollTo(0, 0);
 }
@@ -654,6 +654,22 @@ function renderPrint() {
   if (!st) { st = document.createElement('style'); st.id = 'pgsz'; document.head.appendChild(st); }
   st.textContent = '@page { size: ' + (PR.paper === 'a4' ? 'A4' : 'letter') + '; margin: 14mm; }';
 }
+/* Audio propio: solo con la sesión del dueño. El reproductor se arma una vez por canción para que transponer no lo detenga. */
+function setupAudio(song) {
+  var box = $('#audioBox'); if (!box) return;
+  var key = editable() && song && song.audio && api.audioUrl ? song.id + '|' + song.audio : '';
+  if ((box.getAttribute('data-k') || '') === key) return;
+  box.setAttribute('data-k', key);
+  if (!key) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="audio"><span class="hint">Cargando el audio…</span></div>';
+  api.audioUrl(song.audio).then(function (url) {
+    if (box.getAttribute('data-k') !== key) return;
+    box.innerHTML = '<div class="audio"><audio controls preload="none" src="' + esc(url) + '"></audio></div>';
+  }, function (e) {
+    if (box.getAttribute('data-k') !== key) return;
+    box.innerHTML = '<div class="audio"><span class="hint">No se pudo cargar el audio: ' + esc((e && e.message) || 'error') + '</span></div>';
+  });
+}
 function fmtDur(s) { return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
 function refreshSong() {
   var song = S.song; if (!song) return;
@@ -677,6 +693,7 @@ function refreshSong() {
   if (n && editable()) info += '<div class="banner warn">' + n + (n === 1 ? ' marca por revisar, resaltada' : ' marcas por revisar, resaltadas') + ' en ámbar. Se corrigen en el editor.</div>';
   if (ctx.ss !== 0 && hasUntransposable(ctx.blocks)) info += '<div class="banner">Las figuras cuerda-traste y las tablaturas conservan su posición original.</div>';
   $('#info').innerHTML = info;
+  setupAudio(song);
   var strip = $('#dgStrip');
   strip.hidden = !S.dg;
   strip.innerHTML = S.dg ? stripHTML(song, ctx) : '';
@@ -749,6 +766,10 @@ function openEditor(id, review) {
         '<label class="f">Carátula (URL)<input type="text" id="fCover" placeholder="https://…"></label></div>' +
         '<div class="actions"><button type="button" class="btn" id="alFind">Buscar álbum</button><button type="button" class="btn" id="alClear">Quitar álbum</button><span class="hint" id="alMsg" role="status"></span></div>' +
         '<div class="alres" id="alRes" hidden></div></div></div>' +
+      (api.audioList ? '<div class="audiobox"><div class="row2 au-r"><label class="f">Audio (archivo en R2)<input type="text" id="fAudio" readonly placeholder="Sin audio"></label>' +
+        '<label class="f">Buscar por nombre<input type="text" id="auQ" placeholder="Parte del título o del artista"></label></div>' +
+        '<div class="actions"><button type="button" class="btn" id="auFind">Buscar audio</button><button type="button" class="btn" id="auClear">Quitar audio</button><span class="hint" id="auMsg" role="status"></span></div>' +
+        '<div class="alres" id="auRes" hidden></div></div>' : '') +
       '<label class="f">Letra y acordes<textarea id="fBody" spellcheck="false"></textarea></label>' +
       '<div class="actions"><button type="button" class="btn" id="edAbove">Convertir acordes sobre la letra</button><span class="hint" id="abMsg" role="status"></span></div>' +
       '<details class="syntax"><summary>Cómo se escribe</summary><ul>' +
@@ -772,6 +793,7 @@ function openEditor(id, review) {
   $('#fTitle').value = d.title; $('#fArtist').value = d.artist; $('#fKey').value = d.key;
   $('#fTuning').value = d.tuning || ''; $('#fBody').value = d.body || '';
   $('#fAlbum').value = d.album || ''; $('#fYear').value = d.year || ''; $('#fCover').value = d.cover || '';
+  if ($('#fAudio')) { $('#fAudio').value = d.audio || ''; $('#auQ').value = d.title || ''; }
   coverPrev();
   refreshPreview();
   if (review) {
@@ -841,6 +863,21 @@ function readForm() {
   d.title = $('#fTitle').value; d.artist = $('#fArtist').value; d.key = $('#fKey').value.trim();
   d.tuning = $('#fTuning').value; d.status = $('#fStatus').value; d.body = $('#fBody').value;
   d.album = $('#fAlbum').value.trim(); d.year = $('#fYear').value.replace(/\D/g, '').slice(0, 4); d.cover = $('#fCover').value.trim();
+  if ($('#fAudio')) d.audio = $('#fAudio').value.trim();
+}
+function findAudio() {
+  var res = $('#auRes'), msg = $('#auMsg'), q = $('#auQ').value.trim();
+  msg.textContent = 'Buscando…'; res.hidden = true;
+  api.audioList(q).then(function (list) {
+    if (S.view !== 'edit') return;
+    S.audioRes = list;
+    if (!list.length) { msg.textContent = 'No hay archivos con ese nombre en R2. Prueba con menos palabras.'; return; }
+    msg.textContent = 'Elige el archivo.';
+    res.hidden = false;
+    res.innerHTML = list.map(function (f, i) {
+      return '<button type="button" class="alopt auopt" data-au="' + i + '"><span><b>' + esc(f.key) + '</b><i>' + (f.size ? (f.size / 1048576).toFixed(1).replace('.', ',') + ' MB' : '') + '</i></span></button>';
+    }).join('');
+  }, function (e) { if (S.view === 'edit') msg.textContent = 'No se pudo buscar: ' + ((e && e.message) || 'error'); });
 }
 function coverPrev() {
   var el = $('#abCover'); if (!el) return;
@@ -1101,6 +1138,14 @@ view.addEventListener('click', function (e) {
     return;
   }
   if (t.id === 'chScan') { ensureSongChords(true); return; }
+  var au = t.closest('[data-au]');
+  if (au && S.view === 'edit') {
+    var pf = (S.audioRes || [])[parseInt(au.getAttribute('data-au'), 10)];
+    if (pf) { $('#fAudio').value = pf.key; readForm(); $('#auRes').hidden = true; $('#auMsg').textContent = 'Audio asignado.'; }
+    return;
+  }
+  if (t.id === 'auFind') { findAudio(); return; }
+  if (t.id === 'auClear') { $('#fAudio').value = ''; readForm(); $('#auRes').hidden = true; $('#auMsg').textContent = ''; return; }
   if (t.id === 'alFind') { findAlbum(); return; }
   if (t.id === 'alClear') { $('#fAlbum').value = ''; $('#fYear').value = ''; $('#fCover').value = ''; readForm(); coverPrev(); $('#alRes').hidden = true; $('#alMsg').textContent = ''; return; }
   var o = t.closest('[data-open]');
@@ -1230,6 +1275,7 @@ view.addEventListener('mouseover', function (e) { var c = e.target.closest('[dat
 view.addEventListener('mouseout', function (e) { if (e.target.closest('[data-ch]')) hidePopSoon(); });
 view.addEventListener('click', function (e) { var c = e.target.closest('[data-ch]'); if (c) showPop(c); });
 view.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && e.target && e.target.id === 'auQ') { e.preventDefault(); findAudio(); return; }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-ch]')) { e.preventDefault(); showPop(e.target); }
 });
 pop.addEventListener('mouseenter', function () { clearTimeout(popT); });

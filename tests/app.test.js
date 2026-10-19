@@ -217,6 +217,23 @@ $('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: tr
 const alb = [...api.metas.values()].find((m) => m.album === 'Disco Uno');
 ok('se guarda con álbum, año y carátula', !!alb && alb.year === '1975' && alb.cover.startsWith('https://'));
 ok('la canción muestra la carátula y el álbum', !!$('.shead img.cover') && /Disco Uno \(1975\)/.test($('.meta').textContent));
+// ---- audio propio (R2) ----
+const urls = [];
+api.audioList = async (q) => { api.lastAudioQ = q; return [{ key: 'Artista X - Tema.mp3', size: 5242880 }]; };
+api.audioUrl = async (key) => { urls.push(key); return 'https://r2.example/' + encodeURIComponent(key) + '?sig=1'; };
+click($('[data-act="back"]'));
+click($$('.item')[0]); await wait(); click($('[data-act="edit"]'));
+ok('el editor trae el campo de audio con el título como búsqueda', !!$('#fAudio') && !!$('#auFind') && $('#auQ').value.length > 0);
+click($('#auFind')); await wait();
+ok('buscar audio lista los archivos con su tamaño', api.lastAudioQ === $('#auQ').value.trim() && $$('.auopt').length === 1 && /5,0 MB/.test($('.auopt').textContent));
+click($('.auopt'));
+ok('elegir un archivo lo asigna', $('#fAudio').value === 'Artista X - Tema.mp3');
+$('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true })); await wait();
+ok('se guarda con el audio', [...api.metas.values()].some((m) => m.audio === 'Artista X - Tema.mp3'));
+ok('la canción muestra el reproductor con el enlace pedido', urls.length === 1 && !!$('#audioBox audio') && /^https:\/\/r2\.example\//.test($('#audioBox audio').getAttribute('src')));
+const au0 = $('#audioBox audio');
+click($('[data-act="tp"]'));
+ok('transponer no rearma el reproductor', $('#audioBox audio') === au0 && urls.length === 1);
 click($('[data-act="back"]'));
 click($$('.item')[0]); await wait(); click($('[data-act="edit"]'));
 click($('#edDel')); ok('primer clic pide confirmar', /Confirmar/.test($('#edDel').textContent));
