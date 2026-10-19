@@ -654,17 +654,28 @@ function renderPrint() {
   if (!st) { st = document.createElement('style'); st.id = 'pgsz'; document.head.appendChild(st); }
   st.textContent = '@page { size: ' + (PR.paper === 'a4' ? 'A4' : 'letter') + '; margin: 14mm; }';
 }
-/* Audio propio: solo con la sesión del dueño. El reproductor se arma una vez por canción para que transponer no lo detenga. */
+/* Audio propio. El reproductor se arma una vez por canción para que transponer no lo detenga. Con sesión se pide por el nombre
+   del archivo; sin sesión, por la canción (el servidor solo responde si está revisada). Si el enlace temporal vence, pide otro y sigue. */
+function audioSource(song) { return editable() ? (api.audioUrl ? api.audioUrl(song.audio) : null) : (api.audioPlay ? api.audioPlay(song.id) : null); }
 function setupAudio(song) {
   var box = $('#audioBox'); if (!box) return;
-  var key = editable() && song && song.audio && api.audioUrl ? song.id + '|' + song.audio : '';
+  var key = song && song.audio && (editable() ? api.audioUrl : api.audioPlay) ? song.id + '|' + song.audio + '|' + (editable() ? 'o' : 'g') : '';
   if ((box.getAttribute('data-k') || '') === key) return;
   box.setAttribute('data-k', key);
   if (!key) { box.innerHTML = ''; return; }
   box.innerHTML = '<div class="audio"><span class="hint">Cargando el audio…</span></div>';
-  api.audioUrl(song.audio).then(function (url) {
+  audioSource(song).then(function (url) {
     if (box.getAttribute('data-k') !== key) return;
     box.innerHTML = '<div class="audio"><audio controls preload="none" src="' + esc(url) + '"></audio></div>';
+    var el = box.querySelector('audio'), tries = 0;
+    el.addEventListener('error', function () {
+      if (tries++ > 1 || box.getAttribute('data-k') !== key) return;
+      var t = el.currentTime, playing = !el.paused;
+      audioSource(song).then(function (u2) {
+        if (box.getAttribute('data-k') !== key) return;
+        el.src = u2; el.currentTime = t; if (playing) el.play();
+      }, function () { /* sin red: queda el mensaje del navegador */ });
+    });
   }, function (e) {
     if (box.getAttribute('data-k') !== key) return;
     box.innerHTML = '<div class="audio"><span class="hint">No se pudo cargar el audio: ' + esc((e && e.message) || 'error') + '</span></div>';

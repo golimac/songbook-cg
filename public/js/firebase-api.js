@@ -136,6 +136,14 @@ export function createFirebaseApi() {
       return j;
     },
     async audioList(q) { return (await this.audioCall({ action: 'list', q })).files || []; },
+    // Para quien no tiene sesión: el servidor solo responde si la canción está revisada y tiene audio.
+    async audioPlay(id) {
+      const r = await fetch('/api/audio', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'play', id }) });
+      let j = null;
+      try { j = await r.json(); } catch (e) { /* respuesta sin JSON */ }
+      if (!r.ok) throw new Error((j && j.error) || 'La solicitud de audio falló (' + r.status + ').');
+      return j.url;
+    },
     async audioUrl(key) { return (await this.audioCall({ action: 'url', key })).url; },
 
     saveMany(songs) {

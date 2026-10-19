@@ -2,6 +2,8 @@
 // Firma las solicitudes con AWS Signature V4 en el servidor, sin dependencias, para probarlas sin red.
 import { createHash, createHmac } from 'node:crypto';
 import { verifyOwner } from './_lib.js';
+import { fromFirestore } from './_song.js';
+import { firebaseConfig } from '../public/js/firebase-config.js';
 
 const sha = (s) => createHash('sha256').update(s).digest('hex');
 const hmac = (k, s) => createHmac('sha256', k).update(s).digest();
@@ -54,14 +56,28 @@ export function r2Config(env) {
 
 export async function handleAudio(req, env, fetchFn, now = new Date()) {
   if (req.method !== 'POST') return { status: 405, body: { error: 'Usa POST.' } };
+  const b = req.body || {};
+  const cfg = r2Config(env);
+  // Reproducir una canción: no pide sesión. Solo entrega el audio de una canción revisada, que es la que ya se ve sin sesión.
+  if (b.action === 'play') {
+    if (cfg.error) return { status: 500, body: { error: cfg.error } };
+    const id = String(b.id || '');
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return { status: 400, body: { error: 'Canción no válida.' } };
+    let song = null;
+    try {
+      const r = await fetchFn('https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(firebaseConfig.projectId) +
+        '/databases/(default)/documents/songs/' + encodeURIComponent(id) + '?key=' + encodeURIComponent(firebaseConfig.apiKey), { headers: { referer: 'https://' + String((req.headers && (req.headers['x-forwarded-host'] || req.headers.host)) || '') + '/' } });
+      if (r.ok) song = fromFirestore(await r.json());
+    } catch (e) { return { status: 502, body: { error: 'No se pudo leer la canción.' } }; }
+    if (!song || song.status !== 'revisada' || !song.audio || !AUDIO_RE.test(song.audio)) return { status: 404, body: { error: 'Esta canción no tiene audio.' } };
+    return { status: 200, body: { url: presign({ host: cfg.host, path: '/' + cfg.bucket + '/' + song.audio, accessKey: cfg.accessKey, secretKey: cfg.secretKey, now, expires: 21600 }) } };
+  }
   const auth = String(req.headers.authorization || '');
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   let owner = false;
   try { owner = await verifyOwner(token, env, fetchFn); } catch (e) { return { status: 502, body: { error: 'No se pudo verificar la sesión.' } }; }
   if (!owner) return { status: 401, body: { error: 'Sesión no autorizada.' } };
-  const cfg = r2Config(env);
   if (cfg.error) return { status: 500, body: { error: cfg.error } };
-  const b = req.body || {};
   const sign = (path, query, expires) => presign({ host: cfg.host, path, query, accessKey: cfg.accessKey, secretKey: cfg.secretKey, now, expires });
   if (b.action === 'url') {
     const key = String(b.key || '');

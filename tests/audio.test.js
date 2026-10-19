@@ -22,6 +22,10 @@ const calls = [];
 const mk = (o = {}) => async (url) => {
   calls.push(url);
   if (url.includes('identitytoolkit')) return { ok: true, json: async () => ({ users: [{ email: o.email || 'yo@example.test', emailVerified: true }] }) };
+  if (url.includes('firestore.googleapis.com')) {
+    const doc = o.song || { status: 'revisada', audio: 'La Unión - La casa de los sueños.mp3' };
+    return { ok: true, json: async () => ({ fields: Object.fromEntries(Object.entries(doc).map(([k, v]) => [k, { stringValue: v }])) }) };
+  }
   if (o.status) return { ok: false, status: o.status };
   return { ok: true, text: async () => XML.replace('<IsTruncated>true</IsTruncated><NextContinuationToken>tok&amp;1</NextContinuationToken>', '<IsTruncated>false</IsTruncated>') };
 };
@@ -39,4 +43,11 @@ ok('otra cuenta rechaza', (await handleAudio(req({ action: 'list' }), env, mk({ 
 ok('sin variables avisa cuáles faltan', /R2_BUCKET/.test((await handleAudio(req({ action: 'list' }), { ...env, R2_BUCKET: '' }, mk(), now)).body.error));
 ok('error de R2 se informa', (await handleAudio(req({ action: 'list' }), env, mk({ status: 403 }), now)).status === 502);
 ok('GET no se acepta', (await handleAudio(req({}, 'tok', 'GET'), env, mk(), now)).status === 405);
+const rq2 = (id) => ({ method: 'POST', headers: { host: 'songbook.example' }, body: { action: 'play', id } });
+o = await handleAudio(rq2('abc123'), env, mk(), now);
+ok('sin sesión entrega el audio de una canción revisada', o.status === 200 && /La%20Uni%C3%B3n%20-%20La%20casa%20de%20los%20sue%C3%B1os\.mp3\?.*X-Amz-Signature=/.test(o.body.url));
+ok('una canción pendiente no entrega audio', (await handleAudio(rq2('abc123'), env, mk({ song: { status: 'pendiente', audio: 'x.mp3' } }), now)).status === 404);
+ok('una canción sin audio no entrega nada', (await handleAudio(rq2('abc123'), env, mk({ song: { status: 'revisada' } }), now)).status === 404);
+ok('el identificador de la canción se valida', (await handleAudio(rq2('../x'), env, mk(), now)).status === 400);
+ok('sin sesión no se puede listar ni pedir un archivo suelto', (await handleAudio({ method: 'POST', headers: {}, body: { action: 'url', key: 'x.mp3' } }, env, mk(), now)).status === 401);
 if (fail) { console.log('FALLARON ' + fail); process.exit(1); }
