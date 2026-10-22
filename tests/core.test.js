@@ -304,6 +304,12 @@ eq('acordes pegados con guion en una línea sobre la letra', C.chordsAbove('   E
   eq('chordHint lista los caracteres raros del símbolo', C.chordHint(mk('Asus4\u0301 Asus4/C E7')).odd, ['U+0301']);
 }
 
+{
+  const Z = '\u200B';
+  const r = C.chordsAbove('        E7 ' + Z + '        Asus4...\n     Si vivos o muertos,');
+  eq('un espacio de ancho cero suelto y los puntos suspensivos tras el acorde no impiden convertir', [r.count, /\[E7\].*\[Asus4\]/.test(r.text)], [1, true]);
+}
+
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
 process.exitCode = fail ? 1 : 0;
 

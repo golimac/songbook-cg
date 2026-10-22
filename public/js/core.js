@@ -474,6 +474,7 @@ function chordLineInfo(line) {
       }
     }
     var c = solToLetter(cleanTok(tk));
+    if (!c) continue;
     if (!parseChord(c)) return null;
     if (last && last.sep) { last.text += ' ' + last.sep + ' ' + c; last.sep = ''; }
     else { last = { col: m.index, text: c, sep: '' }; groups.push(last); }
@@ -483,8 +484,10 @@ function chordLineInfo(line) {
 }
 /* Limpia lo que se cuela al pegar o escribir: caracteres invisibles, letras de otros alfabetos que se ven iguales y variantes del grado */
 var HOMO = { 'А': 'A', 'В': 'B', 'Е': 'E', 'С': 'C', 'а': 'a', 'е': 'e', 'с': 'c', 'о': 'o', 'ѕ': 's', 'υ': 'u', 'ս': 'u' };
+var INVIS = /[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g;
 function cleanTok(t) {
-  return String(t).replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '').replace(/[º˚∘]/g, '°').normalize('NFKC')
+  /* los puntos suspensivos tras un acorde ("Asus4...") marcan que se sostiene: se ignoran al leer el acorde */
+  return String(t).replace(INVIS, '').replace(/(.)(\.{2,}|…)+$/, '$1').replace(/[º˚∘]/g, '°').normalize('NFKC')
     .replace(/[АВЕСаесоѕυս]/g, function (c) { return HOMO[c]; }).replace(/[♯]/g, '#').replace(/[♭]/g, 'b');
 }
 /* Si ninguna línea se reconoce como de acordes, busca una que casi lo sea y dice qué símbolo no entendió */
@@ -493,7 +496,7 @@ function chordHint(text) {
   for (var i = 0; i < lines.length; i++) {
     var l = lines[i], nx = lines[i + 1];
     if (!/\S/.test(l) || l.charAt(0) === '>' || l.charAt(0) === '{' || nx == null || !/\S/.test(nx)) continue;
-    var toks = l.split(/\s+/).filter(function (t) { return t && t !== '-' && t !== '·'; });
+    var toks = l.replace(INVIS, '').split(/\s+/).filter(function (t) { return t && t !== '-' && t !== '·'; });
     var good = toks.filter(function (t) { return parseChord(solToLetter(cleanTok(t))); });
     if (good.length >= 2 && good.length < toks.length && toks.length - good.length <= 2) {
       var bad = toks.filter(function (t) { return good.indexOf(t) < 0; })[0];
@@ -504,7 +507,7 @@ function chordHint(text) {
   return null;
 }
 function chordsAbove(text) {
-  var lines = String(text || '').split('\n'), out = [], n = 0;
+  var lines = String(text || '').replace(INVIS, '').split('\n'), out = [], n = 0;
   for (var i = 0; i < lines.length; i++) {
     var g = chordLineInfo(lines[i]);
     if (!g) { out.push(lines[i]); continue; }
