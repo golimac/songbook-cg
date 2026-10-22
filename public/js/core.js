@@ -473,13 +473,19 @@ function chordLineInfo(line) {
         continue;
       }
     }
-    var c = solToLetter(tk.replace(/[º˚∘]/g, '°'));
+    var c = solToLetter(cleanTok(tk));
     if (!parseChord(c)) return null;
     if (last && last.sep) { last.text += ' ' + last.sep + ' ' + c; last.sep = ''; }
     else { last = { col: m.index, text: c, sep: '' }; groups.push(last); }
   }
   if (!groups.length || (last && last.sep)) return null;
   return groups;
+}
+/* Limpia lo que se cuela al pegar o escribir: caracteres invisibles, letras de otros alfabetos que se ven iguales y variantes del grado */
+var HOMO = { 'А': 'A', 'В': 'B', 'Е': 'E', 'С': 'C', 'а': 'a', 'е': 'e', 'с': 'c', 'о': 'o', 'ѕ': 's', 'υ': 'u', 'ս': 'u' };
+function cleanTok(t) {
+  return String(t).replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '').replace(/[º˚∘]/g, '°').normalize('NFKC')
+    .replace(/[АВЕСаесоѕυս]/g, function (c) { return HOMO[c]; }).replace(/[♯]/g, '#').replace(/[♭]/g, 'b');
 }
 /* Si ninguna línea se reconoce como de acordes, busca una que casi lo sea y dice qué símbolo no entendió */
 function chordHint(text) {
@@ -488,10 +494,11 @@ function chordHint(text) {
     var l = lines[i], nx = lines[i + 1];
     if (!/\S/.test(l) || l.charAt(0) === '>' || l.charAt(0) === '{' || nx == null || !/\S/.test(nx)) continue;
     var toks = l.split(/\s+/).filter(function (t) { return t && t !== '-' && t !== '·'; });
-    var good = toks.filter(function (t) { return parseChord(solToLetter(t.replace(/[º˚∘]/g, '°'))); });
+    var good = toks.filter(function (t) { return parseChord(solToLetter(cleanTok(t))); });
     if (good.length >= 2 && good.length < toks.length && toks.length - good.length <= 2) {
       var bad = toks.filter(function (t) { return good.indexOf(t) < 0; })[0];
-      return { line: i + 1, token: bad };
+      var odd = bad.split('').filter(function (ch) { return ch.charCodeAt(0) > 126; }).map(function (ch) { return 'U+' + ('0000' + ch.charCodeAt(0).toString(16).toUpperCase()).slice(-4); });
+      return { line: i + 1, token: bad, odd: odd };
     }
   }
   return null;

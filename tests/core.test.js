@@ -298,6 +298,12 @@ eq('acordes pegados con guion en una línea sobre la letra', C.chordsAbove('   E
   eq('chordHint señala el símbolo que no entendió', [C.chordHint('Asus4 Asus4/C   B$ E7\n  Tú me recuerdas').token, C.chordHint('hola mundo\nabc')], ['B$', null]);
 }
 
+{
+  const mk = (a) => a + '\n  Tú me recuerdas el prado';
+  eq('un carácter invisible dentro del acorde no impide convertir', [C.chordsAbove(mk('A\u200Bsus4 Asus4/C B\u00BA E7')).count, C.chordsAbove(mk('\u0410sus4 Asus4/C E7')).count], [1, 1]);
+  eq('chordHint lista los caracteres raros del símbolo', C.chordHint(mk('Asus4\u0301 Asus4/C E7')).odd, ['U+0301']);
+}
+
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
 process.exitCode = fail ? 1 : 0;
 
