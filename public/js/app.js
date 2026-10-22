@@ -1,6 +1,6 @@
 import {
   parseChord, chordToString, transposeChord, parseKey, flatsFor, keyName, parseBody, collectChords,
-  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove, setUserShapes, chordKey, fillTab, catalogNames, catQual, nameShape
+  countDoubts, hasUntransposable, inferKey, segTokens, shapesFor, shapeFor, diagramFor, toChordPro, listDoubts, chordsAbove, chordHint, setUserShapes, chordKey, fillTab, catalogNames, catQual, nameShape
 } from './core.js';
 import { imaging as realImaging } from './photo.js';
 import { createImporter } from './import.js';
@@ -1264,7 +1264,7 @@ view.addEventListener('click', function (e) {
   else if (e.target.getAttribute && e.target.getAttribute('data-rev')) revGo(e.target.getAttribute('data-rev') === 'next' ? 1 : -1);
   else if (e.target.id === 'edAbove') {
     var ta0 = $('#fBody'), r0 = chordsAbove(ta0.value);
-    if (!r0.count) { $('#abMsg').textContent = 'No encontré líneas de acordes sobre la letra.'; }
+    if (!r0.count) { var h0 = chordHint(ta0.value); $('#abMsg').textContent = h0 ? 'No reconocí «' + h0.token + '» como acorde en la línea ' + h0.line + '. Corrígelo y vuelve a intentar.' : 'No encontré líneas de acordes sobre la letra.'; }
     else { ta0.value = r0.text; ta0.dispatchEvent(new Event('input', { bubbles: true })); $('#abMsg').textContent = r0.count + ' líneas convertidas.'; }
   }
   else if (e.target.id === 'edCancel') { if (S.isNew) renderLibrary(); else showSong(S.song); }

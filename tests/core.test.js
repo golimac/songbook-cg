@@ -291,5 +291,13 @@ eq('acordes pegados con guion en una línea sobre la letra', C.chordsAbove('   E
   eq('los acordes de todas las líneas se recogen', C.collectChords(b).map((x) => x.orig).join(), 'C,C/B,C/A,Am,Am/G,G,D');
 }
 
+{
+  const t = 'Asus4 Asus4/C   B° E7\n  Tú me recuerdas';
+  const r = C.chordsAbove(t.replace('°', 'º'));
+  eq('el grado º (ordinal) se lee como ° al convertir acordes sobre la letra', [r.count, /\[B°\]/.test(r.text)], [1, true]);
+  eq('chordHint señala el símbolo que no entendió', [C.chordHint('Asus4 Asus4/C   B$ E7\n  Tú me recuerdas').token, C.chordHint('hola mundo\nabc')], ['B$', null]);
+}
+
 console.log(fail ? '\n' + fail + ' pruebas fallaron' : '\ntodas las pruebas pasan');
 process.exitCode = fail ? 1 : 0;
+

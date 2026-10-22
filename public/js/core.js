@@ -473,13 +473,28 @@ function chordLineInfo(line) {
         continue;
       }
     }
-    var c = solToLetter(tk);
+    var c = solToLetter(tk.replace(/[º˚∘]/g, '°'));
     if (!parseChord(c)) return null;
     if (last && last.sep) { last.text += ' ' + last.sep + ' ' + c; last.sep = ''; }
     else { last = { col: m.index, text: c, sep: '' }; groups.push(last); }
   }
   if (!groups.length || (last && last.sep)) return null;
   return groups;
+}
+/* Si ninguna línea se reconoce como de acordes, busca una que casi lo sea y dice qué símbolo no entendió */
+function chordHint(text) {
+  var lines = String(text || '').split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i], nx = lines[i + 1];
+    if (!/\S/.test(l) || l.charAt(0) === '>' || l.charAt(0) === '{' || nx == null || !/\S/.test(nx)) continue;
+    var toks = l.split(/\s+/).filter(function (t) { return t && t !== '-' && t !== '·'; });
+    var good = toks.filter(function (t) { return parseChord(solToLetter(t.replace(/[º˚∘]/g, '°'))); });
+    if (good.length >= 2 && good.length < toks.length && toks.length - good.length <= 2) {
+      var bad = toks.filter(function (t) { return good.indexOf(t) < 0; })[0];
+      return { line: i + 1, token: bad };
+    }
+  }
+  return null;
 }
 function chordsAbove(text) {
   var lines = String(text || '').split('\n'), out = [], n = 0;
@@ -641,5 +656,5 @@ function nameShape(frets) {
 export {
   parseChord, chordToString, chordPc, transposeChord, parseKey, flatsFor, keyName,
   tokenizeLine, segTokens, parseBody, collectChords, countDoubts, hasUntransposable, inferKey,
-  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, setUserShapes, chordKey, parseFill, fillTab, catalogNames, catQual, nameShape
+  shapesFor, shapeFor, shiftDiagram, diagramFor, toChordPro, convertSolfege, listDoubts, chordsAbove, chordHint, setUserShapes, chordKey, parseFill, fillTab, catalogNames, catQual, nameShape
 };
