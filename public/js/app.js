@@ -666,8 +666,11 @@ function setupAudio(song) {
   box.innerHTML = '<div class="audio"><span class="hint">Cargando el audio…</span></div>';
   audioSource(song).then(function (url) {
     if (box.getAttribute('data-k') !== key) return;
-    box.innerHTML = '<div class="audio"><audio controls preload="none" src="' + esc(url) + '"></audio></div>';
+    box.innerHTML = '<div class="audio"><audio controls preload="none" src="' + esc(url) + '"></audio>' +
+      '<div class="speed" role="group" aria-label="Velocidad de reproducción"><span class="lab">Velocidad</span>' +
+      [1, 0.9, 0.8, 0.75].map(function (r) { return '<button type="button" class="btn sq' + (r === 1 ? ' primary' : '') + '" data-sp="' + r + '" aria-pressed="' + (r === 1) + '">' + Math.round(r * 100) + '%</button>'; }).join('') + '</div></div>';
     var el = box.querySelector('audio'), tries = 0;
+    el.preservesPitch = true; el.webkitPreservesPitch = true;
     el.addEventListener('error', function () {
       if (tries++ > 1 || box.getAttribute('data-k') !== key) return;
       var t = el.currentTime, playing = !el.paused;
@@ -1153,6 +1156,16 @@ view.addEventListener('click', function (e) {
   if (au && S.view === 'edit') {
     var pf = (S.audioRes || [])[parseInt(au.getAttribute('data-au'), 10)];
     if (pf) { $('#fAudio').value = pf.key; readForm(); $('#auRes').hidden = true; $('#auMsg').textContent = 'Audio asignado.'; }
+    return;
+  }
+  var sp = t.closest('[data-sp]');
+  if (sp) {
+    var ael = $('#audioBox audio');
+    if (ael) {
+      ael.playbackRate = parseFloat(sp.getAttribute('data-sp'));
+      ael.preservesPitch = true; ael.webkitPreservesPitch = true;
+      Array.prototype.forEach.call(document.querySelectorAll('#audioBox [data-sp]'), function (b) { var on = b === sp; b.classList.toggle('primary', on); b.setAttribute('aria-pressed', String(on)); });
+    }
     return;
   }
   if (t.id === 'auFind') { findAudio(); return; }
