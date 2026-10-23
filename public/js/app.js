@@ -668,7 +668,7 @@ function setupAudio(song) {
     if (box.getAttribute('data-k') !== key) return;
     box.innerHTML = '<div class="audio"><audio controls preload="none" src="' + esc(url) + '"></audio>' +
       '<div class="speed" role="group" aria-label="Velocidad de reproducción"><span class="lab">Velocidad</span>' +
-      [1, 0.9, 0.8, 0.75].map(function (r) { return '<button type="button" class="btn sq' + (r === 1 ? ' primary' : '') + '" data-sp="' + r + '" aria-pressed="' + (r === 1) + '">' + Math.round(r * 100) + '%</button>'; }).join('') + '</div></div>';
+      [1, 0.9, 0.8, 0.75, 0.6, 0.5].map(function (r) { return '<button type="button" class="btn sq' + (r === 1 ? ' primary' : '') + '" data-sp="' + r + '" aria-pressed="' + (r === 1) + '">' + Math.round(r * 100) + '%</button>'; }).join('') + '</div></div>';
     var el = box.querySelector('audio'), tries = 0;
     el.preservesPitch = true; el.webkitPreservesPitch = true;
     el.addEventListener('error', function () {
