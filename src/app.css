@@ -234,9 +234,9 @@
   .ab-r { @apply sm:grid-cols-[minmax(0,1.4fr)_88px_minmax(0,1.4fr)]; }
   .audiobox { @apply grid gap-3 p-3 rounded-xl border border-rule; background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
   .row2 { @apply grid gap-3 grid-cols-1 sm:grid-cols-2; }
-  .audio { @apply my-3; }
-  .audio audio { @apply w-full; }
-  .speed { @apply flex items-center gap-3 mt-2 text-xs text-mute; }
+  .audio { @apply my-3 flex flex-wrap items-center gap-x-5 gap-y-2; }
+  .audio audio { @apply min-w-0; flex: 1 1 340px; }
+  .speed { @apply flex items-center gap-3 text-xs text-mute shrink-0; }
   .speed .lab { @apply text-xs; }
   .speed input[type=range] { @apply w-40 max-w-full h-4 bg-transparent; -webkit-appearance: none; appearance: none; accent-color: var(--accent); }
   .speed input[type=range]::-webkit-slider-runnable-track { height: 2px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 40%, transparent); }
