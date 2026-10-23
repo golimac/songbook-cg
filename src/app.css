@@ -236,9 +236,14 @@
   .row2 { @apply grid gap-3 grid-cols-1 sm:grid-cols-2; }
   .audio { @apply my-3; }
   .audio audio { @apply w-full; }
-  .speed { @apply flex items-center gap-3 mt-2; }
-  .speed input[type=range] { @apply w-44 max-w-full; }
-  .speed output { @apply text-sm text-mute tabular-nums min-w-[3.2ch]; }
+  .speed { @apply flex items-center gap-3 mt-2 text-xs text-mute; }
+  .speed .lab { @apply text-xs; }
+  .speed input[type=range] { @apply w-40 max-w-full h-4 bg-transparent; -webkit-appearance: none; appearance: none; accent-color: var(--accent); }
+  .speed input[type=range]::-webkit-slider-runnable-track { height: 2px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 40%, transparent); }
+  .speed input[type=range]::-moz-range-track { height: 2px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 40%, transparent); }
+  .speed input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; margin-top: -5px; border-radius: 50%; background: var(--accent); border: 0; }
+  .speed input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 0; }
+  .speed output { @apply text-xs text-mute font-normal tabular-nums min-w-[3.5ch] text-left; }
   .alres { @apply grid gap-1.5; }
   .alopt { @apply flex items-center gap-3 text-left px-2 py-1.5 rounded-lg border border-rule bg-card transition-colors; }
   .alopt:hover { @apply border-spruce; }
