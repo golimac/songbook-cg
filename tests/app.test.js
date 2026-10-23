@@ -234,8 +234,8 @@ ok('la canción muestra el reproductor con el enlace pedido', urls.length === 1 
 const au0 = $('#audioBox audio');
 click($('[data-act="tp"]'));
 ok('transponer no rearma el reproductor', $('#audioBox audio') === au0 && urls.length === 1);
-click($('[data-sp="0.75"]'));
-ok('la velocidad cambia al 75 % y conserva el tono', au0.playbackRate === 0.75 && au0.preservesPitch === true && $('[data-sp="0.75"]').getAttribute('aria-pressed') === 'true' && $('[data-sp="1"]').getAttribute('aria-pressed') === 'false');
+const spd = $('#spd'); spd.value = '80'; spd.dispatchEvent(new w.Event('input', { bubbles: true }));
+ok('el control de velocidad va de 100 a 75, cambia la velocidad y conserva el tono', spd.min === '75' && spd.max === '100' && au0.playbackRate === 0.8 && au0.preservesPitch === true && $('#spdv').textContent === '80%');
 click($('[data-act="back"]'));
 click($$('.item')[0]); await wait(); click($('[data-act="edit"]'));
 click($('#edDel')); ok('primer clic pide confirmar', /Confirmar/.test($('#edDel').textContent));

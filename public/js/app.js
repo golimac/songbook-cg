@@ -667,8 +667,7 @@ function setupAudio(song) {
   audioSource(song).then(function (url) {
     if (box.getAttribute('data-k') !== key) return;
     box.innerHTML = '<div class="audio"><audio controls preload="none" src="' + esc(url) + '"></audio>' +
-      '<div class="speed" role="group" aria-label="Velocidad de reproducción"><span class="lab">Velocidad</span>' +
-      [1, 0.9, 0.8, 0.75, 0.6, 0.5].map(function (r) { return '<button type="button" class="btn sq' + (r === 1 ? ' primary' : '') + '" data-sp="' + r + '" aria-pressed="' + (r === 1) + '">' + Math.round(r * 100) + '%</button>'; }).join('') + '</div></div>';
+      '<div class="speed"><label class="lab" for="spd">Velocidad</label><input type="range" id="spd" min="75" max="100" step="1" value="100"><output id="spdv" for="spd">100%</output></div></div>';
     var el = box.querySelector('audio'), tries = 0;
     el.preservesPitch = true; el.webkitPreservesPitch = true;
     el.addEventListener('error', function () {
@@ -1158,16 +1157,6 @@ view.addEventListener('click', function (e) {
     if (pf) { $('#fAudio').value = pf.key; readForm(); $('#auRes').hidden = true; $('#auMsg').textContent = 'Audio asignado.'; }
     return;
   }
-  var sp = t.closest('[data-sp]');
-  if (sp) {
-    var ael = $('#audioBox audio');
-    if (ael) {
-      ael.playbackRate = parseFloat(sp.getAttribute('data-sp'));
-      ael.preservesPitch = true; ael.webkitPreservesPitch = true;
-      Array.prototype.forEach.call(document.querySelectorAll('#audioBox [data-sp]'), function (b) { var on = b === sp; b.classList.toggle('primary', on); b.setAttribute('aria-pressed', String(on)); });
-    }
-    return;
-  }
   if (t.id === 'auFind') { findAudio(); return; }
   if (t.id === 'auClear') { $('#fAudio').value = ''; readForm(); $('#auRes').hidden = true; $('#auMsg').textContent = ''; return; }
   if (t.id === 'alFind') { findAlbum(); return; }
@@ -1222,6 +1211,11 @@ view.addEventListener('click', function (e) {
 });
 view.addEventListener('input', function (e) {
   var id = e.target.id;
+  if (id === 'spd') {
+    var ael = $('#audioBox audio'), pct = parseInt(e.target.value, 10);
+    if (ael) { ael.playbackRate = pct / 100; ael.preservesPitch = true; ael.webkitPreservesPitch = true; }
+    $('#spdv').textContent = pct + '%';
+  }
   if (id === 'dur') { S.dur = parseInt(e.target.value, 10); $('#durv').textContent = fmtDur(S.dur); }
   else if (id === 'chName') {
     var qv = e.target.value.trim().toLowerCase().replace(/\s+/g, ''), shown = 0, qk = eqKey(e.target.value.trim());
