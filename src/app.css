@@ -243,6 +243,9 @@
   .speed input[type=range]::-moz-range-track { height: 2px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 40%, transparent); }
   .speed input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; margin-top: -5px; border-radius: 50%; background: var(--accent); border: 0; }
   .speed input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 0; }
+  .speed input[type=range], .speed input[type=range]:hover, .speed input[type=range]:focus, .speed input[type=range]:focus-visible { outline: none; border: 0; box-shadow: none; padding: 0; background: transparent; }
+  .speed input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .speed input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); }
   .speed output { @apply text-xs text-mute font-normal tabular-nums min-w-[3.5ch] text-left; }
   .alres { @apply grid gap-1.5; }
   .alopt { @apply flex items-center gap-3 text-left px-2 py-1.5 rounded-lg border border-rule bg-card transition-colors; }
