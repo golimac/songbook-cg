@@ -255,7 +255,9 @@ function itemsHTML(list, withArtist) {
   }
   return out.join('');
 }
-function byTitle(a, b) { return String(a.title).localeCompare(String(b.title), 'es') || String(a.artist).localeCompare(String(b.artist), 'es'); }
+/* Orden alfabético sin contar signos al inicio (¿Qué hago ahora? va con la Q, "Hola" con la H) */
+function titleKey(t) { return norm(t).replace(/^[^a-z0-9]+/, ''); }
+function byTitle(a, b) { return titleKey(a.title).localeCompare(titleKey(b.title), 'es') || String(a.title).localeCompare(String(b.title), 'es') || String(a.artist).localeCompare(String(b.artist), 'es'); }
 function letterOf(t) { var c = norm(t).replace(/[^a-z0-9]/g, '').charAt(0).toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; }
 /* Varios artistas se separan con ";": cada uno cuenta aparte en el índice de Artistas. */
 function artistParts(str) { return String(str || '').split(';').map(function (x) { return x.trim(); }).filter(Boolean); }

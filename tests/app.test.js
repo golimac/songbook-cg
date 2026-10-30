@@ -202,6 +202,9 @@ click($('#edCancel'));
 ok('cancelar vuelve a la biblioteca', !!$('[data-lib="todas"]'));
 click($('[data-lib="todas"]'));
 ok('la lista sigue con 3 canciones', $$('.item').length === 3);
+api.saveSong({ id: 'ord1', title: '¿Dónde estás?', artist: 'X', key: '', status: 'pendiente', body: '', diagrams: {} }); await wait();
+ok('el orden alfabético ignora los signos al inicio', $$('.item').map((i) => i.textContent).findIndex((t) => /Dónde estás/.test(t)) === $$('.item').map((i) => i.textContent).findIndex((t) => /Camino a casa/.test(t)) + 1);
+api.deleteSong('ord1'); await wait();
 // ---- álbum, año y carátula ----
 api.searchAlbum = async (q) => { api.lastAlbumQ = q; return [{ song: 'X', artist: 'Artista X', album: 'Disco Uno', year: '1975', cover: 'https://img.example/600x600bb.jpg' }]; };
 click($$('.item')[0]); await wait(); click($('[data-act="edit"]'));
