@@ -90,7 +90,7 @@ function lyricHTML(b, ctx) {
       if (st) c = '<span class="c cs">' + tokHTML(st, ctx) + '</span>';
       else c = p ? '<span class="c' + dbt(p.doubt) + '"' + chAttr(p) + '>' + esc(dc(p, ctx)) + '</span>'
             : '<span class="c' + dbt(true) + '"' + (editable() ? ' title="Lectura dudosa"' : '') + '>' + esc(s.chord) + '</span>';
-    } else c = '<span class="c"> </span>';
+    } else c = '<span class="c nc"></span>'; /* sin acorde: casilla vacía y sin relleno, para no estirar la sílaba inicial */
     return '<span class="seg">' + c + '<span class="t">' + esc(s.text) + '</span></span>';
   }).join('') + '</div>';
 }
