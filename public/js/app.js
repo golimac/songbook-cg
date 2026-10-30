@@ -1255,7 +1255,6 @@ view.addEventListener('submit', function (e) {
   d.chords = bodyChordNames(d.body);
   harvestDiagrams([d.diagrams]);
   if (S.review) {
-    if (d.status === 'pendiente') d.status = d.doubts ? 'dudas' : 'revisada';
     api.saveSong(d, true).catch(failSave);
     var rv = S.review; S.review = null;
     rv.onSave(d);

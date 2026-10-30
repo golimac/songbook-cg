@@ -133,7 +133,7 @@ ok('corregir la duda la quita de la lista', /Sin dudas pendientes/.test($('#revD
 $('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 await wait();
 const first = [...metas.values()][0];
-ok('guardó con estado revisada', first.status === 'revisada' && first.doubts === 0);
+ok('guardó como pendiente aunque no queden dudas', first.status === 'pendiente' && first.doubts === 0);
 
 // ---- segunda canción: una foto, con duda que se deja ----
 ok('pasa a la segunda canción', /Canción 2 de 2/.test($('#rev').textContent) && /Un viejo y un/.test($('#fBody').value));
@@ -143,7 +143,7 @@ ok('una duda nueva aparece en la lista', /Duda 1 de 1/.test($('#revDoubt').textC
 $('#edForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 await wait();
 const statuses = [...metas.values()].map((m) => m.status).sort();
-ok('con duda sin resolver queda "dudas"', statuses.join() === 'dudas,revisada');
+ok('con o sin dudas, lo importado queda pendiente hasta que se marque revisada', statuses.join() === 'pendiente,pendiente' && [...metas.values()].some((m) => m.doubts > 0));
 click($('[data-lib="todas"]'));
 ok('termina en la biblioteca con las dos canciones y el aviso', !!$('#q') && $$('.item').length === 2 && /2 canciones guardadas/.test($$('.toast').pop().textContent));
 ok('no queda importación activa', !$('#imStage'));
