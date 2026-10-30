@@ -63,8 +63,10 @@ const TEXTS = {
   'a.txt': 'La maza\n\nAm   F\nHola mundo\n\n\n\nOtra cancion\n\nC    G\nChao mundo',
   'b.txt': 'Solita\n\nD   A\nUna sola'
 };
-const extractText = async (f) => { if (/\.doc$/.test(f.name)) throw new Error('Guárdalo como .docx o PDF.'); return TEXTS[f.name]; };
-start(api, { imaging, extractText });
+const extractText = async (f) => { if (/\.pdf$/.test(f.name)) { const e = new Error('Este PDF no tiene texto'); e.noText = true; throw e; } if (/\.doc$/.test(f.name)) throw new Error('Guárdalo como .docx o PDF.'); return TEXTS[f.name]; };
+const rendered = [];
+const renderPdf = async (f) => { rendered.push(f.name); return [new w.File(['x'], 'scan p01.jpg', { type: 'image/jpeg' })]; };
+start(api, { imaging, extractText, renderPdf });
 
 click($('#signInTop')); await wait();
 ok('hay botón de importar fotos', $('#importBtn').hidden === false);
@@ -190,6 +192,14 @@ await wait(30);
 ok('un archivo con una sola canción va directo a la revisión', /Revisar canción/.test($('h1').textContent) && $('#fTitle').value === 'Solita');
 click($('#edSkip')); await wait();
 ok('saltarla termina sin guardar', !!$('#q') && /No se guardó/.test($$('.toast').pop().textContent));
+
+// ---- PDF sin texto: se lee como fotos ----
+click($('#importBtn'));
+Object.defineProperty($('#imTxt'), 'files', { value: [new w.File(['x'], 'escaneado.pdf')] });
+$('#imTxtForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+await wait(40);
+ok('un PDF sin texto se convierte en imágenes y entra al flujo de fotos', rendered.join() === 'escaneado.pdf' && reads.filter((r) => r.mode === 'segment').length >= 2 && /Foto 1 de 1/.test($('h1').textContent));
+click($('#imSkip')); await wait();
 
 console.log(fails.length ? '\nFALLARON:\n' + fails.join('\n') : '\nsin errores');
 process.exitCode = fails.length ? 1 : 0;

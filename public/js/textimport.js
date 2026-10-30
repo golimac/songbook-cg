@@ -176,8 +176,34 @@ export async function extractText(file) {
   else if (ext === 'txt' || ext === 'text' || ext === '' || (file.type || '').indexOf('text/') === 0) t = decodeText(buf);
   else throw new Error('Este tipo de archivo no se puede leer (' + (ext || 'sin extensión') + ').');
   t = cleanText(t);
-  if (!/[A-Za-zÁÉÍÓÚáéíóúñÑ]{3}/.test(t)) throw new Error(ext === 'pdf' ? 'Este PDF no tiene texto (parece una imagen escaneada). Súbelo como fotos.' : 'El archivo no tiene texto.');
+  if (!/[A-Za-zÁÉÍÓÚáéíóúñÑ]{3}/.test(t)) {
+    var e = new Error(ext === 'pdf' ? 'Este PDF no tiene texto (es una imagen o se imprimió como dibujo).' : 'El archivo no tiene texto.');
+    if (ext === 'pdf') e.noText = true;
+    throw e;
+  }
   return t;
+}
+
+/* PDF sin texto: cada página se dibuja en un lienzo y sale como una imagen JPEG, para leerla como foto */
+export async function renderPdfPages(file, maxPages) {
+  var lib = await import(PDFJS);
+  lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+  var doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  var out = [], total = Math.min(doc.numPages, maxPages || 40), base = baseName(file.name);
+  for (var n = 1; n <= total; n++) {
+    var pg = await doc.getPage(n);
+    var v1 = pg.getViewport({ scale: 1 });
+    var scale = Math.min(3, Math.max(1, 1800 / Math.max(v1.width, v1.height)));
+    var vp = pg.getViewport({ scale: scale });
+    var cv = document.createElement('canvas');
+    cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    var cx = cv.getContext('2d');
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+    await pg.render({ canvasContext: cx, viewport: vp }).promise;
+    var blob = await new Promise(function (res) { cv.toBlob(res, 'image/jpeg', 0.88); });
+    out.push(new File([blob], base + ' p' + ('0' + n).slice(-2) + '.jpg', { type: 'image/jpeg' }));
+  }
+  return out;
 }
 
 /* ---------- Separar canciones y armar la ficha ---------- */

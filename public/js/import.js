@@ -1,7 +1,7 @@
 // Importar fotos: elegir fotos, detectar y ajustar recuadros de canciones, leerlas con el modelo y pasar a la pantalla de revisión.
 import { dragBox, groupSongs, removeBox } from './photo.js';
 import { convertSolfege } from './core.js';
-import { extractText as realExtract, splitSongs, toSong } from './textimport.js';
+import { extractText as realExtract, renderPdfPages as realRender, splitSongs, toSong } from './textimport.js';
 
 export function createImporter(d) {
   // d: { view, esc, toast, api, imaging, uid, openReview(review), finish(savedCount) }
@@ -225,21 +225,45 @@ export function createImporter(d) {
 
   /* ---------- Archivos de texto, PDF y Word ---------- */
   function readFiles(files) {
-    var run = I.run, parts = [], errors = [], fi = 0;
+    var run = I.run, parts = [], errors = [], scanned = [], fi = 0;
     var extract = d.extractText || realExtract;
     function next() {
       if (!mine(run)) return;
-      if (fi >= files.length) { afterRead(parts, errors); return; }
+      if (fi >= files.length) { afterRead(parts, errors, scanned); return; }
       var f = files[fi];
       view.innerHTML = '<h1>Leyendo archivos</h1><p class="hint" style="margin-top:6px">Archivo ' + (fi + 1) + ' de ' + files.length + ': ' + esc(f.name) + '</p>';
       extract(f).then(function (text) {
         splitSongs(text).forEach(function (sg) { parts.push({ file: f.name, title: sg.title, text: sg.text }); });
         fi++; next();
-      }, function (e) { errors.push(f.name + ': ' + errMsg(e)); fi++; next(); });
+      }, function (e) {
+        if (e && e.noText) scanned.push(f); else errors.push(f.name + ': ' + errMsg(e));
+        fi++; next();
+      });
     }
     next();
   }
-  function afterRead(parts, errors) {
+  /* PDF sin texto: se convierten en imágenes y siguen el mismo camino que las fotos */
+  function readScanned(scanned, errors) {
+    var run = I.run, render = d.renderPdf || realRender, imgs = [], k = 0;
+    function one() {
+      if (!mine(run)) return;
+      if (k >= scanned.length) {
+        if (errors.length) d.toast(errors.join(' · '), true);
+        I.files = imgs; I.fi = 0; I.saved = 0;
+        beginPhoto(); return;
+      }
+      view.innerHTML = '<h1>Leyendo como fotos</h1><p class="hint" style="margin-top:6px">' + esc(scanned[k].name) + ' no trae texto. Convierto sus páginas en imágenes para leerlas como fotos.</p>';
+      render(scanned[k]).then(function (list) { imgs = imgs.concat(list); k++; one(); }, function (e) {
+        view.innerHTML = '<h1>No se pudo abrir el PDF</h1><p class="hint" style="margin-top:6px">' + esc(scanned[k].name) + ': ' + esc(errMsg(e)) + '</p>' +
+          '<div class="actions" style="margin-top:12px"><button class="btn primary" type="button" id="imBack">Volver</button></div>';
+      });
+    }
+    one();
+  }
+  function afterRead(parts, errors, scanned) {
+    scanned = scanned || [];
+    if (scanned.length && !parts.length) { readScanned(scanned, errors); return; }
+    scanned.forEach(function (f) { errors.push(f.name + ': no trae texto. Súbelo solo y se lee como fotos.'); });
     I.tparts = parts; I.terrors = errors;
     if (!parts.length) {
       view.innerHTML = '<h1>No se encontró ninguna canción</h1>' + errorsHTML(errors) +

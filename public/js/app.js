@@ -48,7 +48,7 @@ function inEdit() { return !!user && S.view === 'edit'; }
 function cur() { return S.view === 'edit' ? S.draft : S.song; }
 function failSave(e) { toast((e && e.code === 'permission-denied') ? 'Esta cuenta no tiene permiso para editar.' : 'No se pudo guardar: ' + ((e && e.message) || 'error desconocido'), true); }
 var imp = createImporter({
-  view: view, esc: esc, toast: toast, api: api, imaging: cfg.imaging || realImaging, extractText: cfg.extractText, uid: uid,
+  view: view, esc: esc, toast: toast, api: api, imaging: cfg.imaging || realImaging, extractText: cfg.extractText, renderPdf: cfg.renderPdf, uid: uid,
   openReview: function (rv) { openEditor(null, rv); },
   finish: function (n, cancelled) {
     renderLibrary();
